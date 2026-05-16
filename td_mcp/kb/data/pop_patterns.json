@@ -66,6 +66,50 @@
       "verified_on_build": "2025.32820"
     },
     {
+      "id": "sphere_with_noise",
+      "name": "Noise-displaced sphere (spherePOP → noisePOP → outPOP)",
+      "description": "Sphere generator with noise displacement on P. Variant of noise_displaced_grid using a closed-topology sphere instead of a flat grid — the displacement reads radially-ish (because P starts on a sphere) rather than vertically, producing organic blob shapes well-suited to creature/asteroid/morph aesthetics.",
+      "tags": ["generator", "attribute-modifier", "displacement", "organic"],
+      "difficulty": "easy",
+      "ops": [
+        {"name": "sphere1", "op_type": "spherePOP", "params": {}},
+        {"name": "noise1", "op_type": "noisePOP", "params": {}},
+        {"name": "out1", "op_type": "outPOP", "params": {}}
+      ],
+      "connections": [
+        {"out": "sphere1", "into": "noise1"},
+        {"out": "noise1", "into": "out1"}
+      ],
+      "notes": "Same noise modifier as noise_displaced_grid but the input topology changes the look entirely. spherePOP has a `rows`/`cols` (or `divisions`) param controlling tessellation density — bump it for finer displacement detail. For perfectly spherical-feel displacement, set noisePOP to perturb along the normal rather than world axes (check the noisePOP `apply` / `direction` params).",
+      "pitfalls": [
+        "Default sphere tessellation may be too coarse for visible noise detail — increase divisions before judging the result.",
+        "If the displaced sphere looks 'flattened' along one axis, the noise period is much smaller than the sphere radius along that axis. Either match scales or set noise to apply uniformly."
+      ],
+      "verified_on_build": "2025.32820"
+    },
+    {
+      "id": "transform_grid",
+      "name": "Grid with transform (gridPOP → transformPOP → outPOP)",
+      "description": "Most basic affine modifier on a generated grid — translate, rotate, scale the point cloud as a whole. Building block when composing POP chains: drop a transformPOP between any generator and its consumer to reposition without touching the generator's params.",
+      "tags": ["generator", "modifier", "affine", "building-block"],
+      "difficulty": "easy",
+      "ops": [
+        {"name": "grid1", "op_type": "gridPOP", "params": {}},
+        {"name": "xform1", "op_type": "transformPOP", "params": {}},
+        {"name": "out1", "op_type": "outPOP", "params": {}}
+      ],
+      "connections": [
+        {"out": "grid1", "into": "xform1"},
+        {"out": "xform1", "into": "out1"}
+      ],
+      "notes": "transformPOP applies a single transform matrix to ALL points uniformly (rigid motion). For per-point variation use mathPOP or attributePOP with expressions. For animated transforms, expression-bind the t/r/s params to a CHOP or absTime.frame.",
+      "pitfalls": [
+        "Rotating around the origin moves the cloud — if you want to rotate in-place, set pivot to the cloud's center first, OR use a precomputed centroid via attributePOP.",
+        "If you chain multiple transformPOPs, order matters (each applies relative to the previous result). Use a single transformPOP with combined tx/ty/tz/rx/ry/rz/sx/sy/sz when you can."
+      ],
+      "verified_on_build": "2025.32820"
+    },
+    {
       "id": "top_to_pop_basic",
       "name": "TOP → POP cross-family bridge (noiseTOP + toptoPOP → outPOP)",
       "description": "Convert a TOP's pixels into POP points (one point per pixel or sampled subset). Foundation for depth-to-points work, video-reactive particles, and any workflow where the visual source lives in TOP space.",
