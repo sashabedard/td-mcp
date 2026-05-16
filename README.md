@@ -41,7 +41,17 @@ Or wire into Claude Code via `~/.claude/settings.json`:
 
 ## TouchDesigner side
 
-Drag-drop `td_bridge_tox/td_mcp_bridge.tox` into `/project1/`. Defaults to port 9981. The companion `.tox` is generated from the Python source in `td_bridge_tox/webserver_callbacks.py`.
+Drag-drop `td_bridge_tox/td_mcp_bridge.tox` into `/project1/`. Defaults to port 9988. The companion `.tox` is generated from the Python source in `td_bridge_tox/webserver_callbacks.py`.
+
+## Skills (workflow forcing)
+
+Three SKILL.md files under `skills/` get auto-loaded by Claude Code when TD work is detected, so the typed-validation workflow gets injected at every conversation start instead of relying on memory. Install with:
+
+```bash
+python scripts/install_skills.py
+```
+
+Copies (not symlinks) into `~/.claude/skills/`. Re-run after pulling changes. Restart Claude Code to pick up new or modified skills.
 
 ## Status of phases
 
@@ -49,10 +59,10 @@ Drag-drop `td_bridge_tox/td_mcp_bridge.tox` into `/project1/`. Defaults to port 
 - [ ] Phase 1 — bridge live (connect, status, inspect, create, mutate, connect ops, delete)
 - [ ] Phase 2 — screenshot, cook stats
 - [ ] Phase 2.5 — checkpoint/rollback
-- [ ] Phase 3 — KB operators structured (LanceDB + Pydantic validation)
-- [ ] Phase 3.5 — Skills authoring (`~/.claude/skills/touchdesigner*/`)
+- [x] Phase 3.5 — Skills authoring (`~/.claude/skills/touchdesigner*/`)
 - [ ] Phase 3.6 — Sub-KB POPs + skill + 15-25 curated patterns
-- [ ] Phase 3.7 — Sub-KB GLSL TOP + templates
+- [x] Phase 3 — KB operators structured (LanceDB + Pydantic validation)
+- [x] Phase 3.7 — Sub-KB GLSL TOP + templates
 - [ ] Phase 4 — Vector KB ingestion (hybrid search + reranker)
 - [ ] Phase 4.5 — Visual techniques curated (80-150 entries)
 - [ ] Phase 5 — Workflow patterns curated (30-50, non-POP)
