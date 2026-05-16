@@ -1,12 +1,52 @@
 {
-  "version": "0.1",
+  "version": "0.2",
   "channels": [
     {
       "handle": "OkamirufuV",
       "url": "https://www.youtube.com/@OkamirufuV/videos",
       "tags": ["POP", "particles", "instancing", "procedural", "tutorial"],
       "notes": "TouchDesigner artist — short POP-focused tutorials (5-15 min). Practical recipes complementing the wiki's abstract docs."
+    },
+    {
+      "handle": "InteractiveImmersiveHQ",
+      "url": "https://www.youtube.com/channel/UC-9DT8kpvykuBEQ2iVatWbA/videos",
+      "tags": ["IIHQ", "tutorial", "general", "interactive", "installation"],
+      "notes": "IIHQ — 416 videos. Broad tutorial coverage incl. POPs. Bilingual EN, occasional series format."
+    },
+    {
+      "handle": "MatthewRagan",
+      "url": "https://www.youtube.com/channel/UCKAAKTI2xLNNBJRkdf8E58A/videos",
+      "tags": ["pro", "Python", "workflow", "production", "tutorial"],
+      "notes": "Matthew Ragan — 208 videos. Production-grade workflows, Python-heavy, advanced patterns. Canonical TD reference."
+    },
+    {
+      "handle": "elekktronaut",
+      "url": "https://www.youtube.com/@elekktronaut/videos",
+      "tags": ["Bileam Tschepe", "tutorial", "organic", "feedback", "patterns"],
+      "notes": "Bileam Tschepe (elekktronaut) — 150 videos. Famous '1-Minute Tutorial' series + deeper procedural patterns."
+    },
+    {
+      "handle": "paketa12",
+      "url": "https://www.youtube.com/@paketa12/videos",
+      "tags": ["TOPs", "GLSL", "procedural", "tutorial"],
+      "notes": "Paketa12 — 179 videos. Strong TOP/GLSL focus, generative + procedural techniques."
+    },
+    {
+      "handle": "nvoidarttech",
+      "url": "https://www.youtube.com/channel/UC661GCFeQpNtEPmR5BsWVQQ/videos",
+      "tags": ["nVoid", "tutorial", "interactive"],
+      "notes": "nVoid Art Tech — TD tutorials and projects."
+    },
+    {
+      "handle": "Derivative",
+      "url": "https://www.youtube.com/channel/UCbgFCfj0vp-nNGQ4hT5uEAg/videos",
+      "tags": ["official", "TD-Event", "Berlin", "Hermanovic", "POP-talks"],
+      "notes": "Official Derivative channel — TD Event Berlin talks (Hermanovic Introducing POPs, Jack DiLaura Intro to POPs, all keynotes). Tier-1 source per spec §6.2."
     }
   ],
-  "playlists": []
+  "playlists": [],
+  "deferred_channels": [
+    {"name": "Crash Course Hermanovic", "note": "may be hosted on Derivative channel as talks"},
+    {"name": "Bentraje Notes", "note": "could not locate active YouTube channel via search"}
+  ]
 }
