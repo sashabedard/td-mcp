@@ -1,0 +1,80 @@
+{
+  "version": "1.0",
+  "td_target": "2025+",
+  "templates": [
+    {
+      "id": "pixel_procedural",
+      "shader_type": "pixel",
+      "input_count": 0,
+      "description": "Pixel shader with no input TOP — generates a procedural color from uTime and UV coordinates. Good for animated test patterns, noise, gradients.",
+      "uniforms_used": ["uTime", "vUV"],
+      "code": "// Pixel shader for GLSL TOP — no input, procedural output.\n// TD auto-injects #version and common uniforms; do NOT add #version yourself.\n\nout vec4 fragColor;\n\nvoid main() {\n    vec2 uv = vUV.st;\n    vec3 col = 0.5 + 0.5 * cos(uTime + uv.xyx + vec3(0.0, 2.0, 4.0));\n    fragColor = TDOutputSwizzle(vec4(col, 1.0));\n}\n"
+    },
+    {
+      "id": "pixel_one_input",
+      "shader_type": "pixel",
+      "input_count": 1,
+      "description": "Pixel shader reading from a single input TOP via sTD2DInputs[0]. Skeleton for invert / threshold / displace / per-pixel filters.",
+      "uniforms_used": ["vUV", "sTD2DInputs"],
+      "code": "// Pixel shader for GLSL TOP — 1 input TOP wired into input 0.\n\nout vec4 fragColor;\n\nvoid main() {\n    vec2 uv = vUV.st;\n    vec4 src = texture(sTD2DInputs[0], uv);\n    // Example: invert RGB, keep alpha\n    vec4 col = vec4(1.0 - src.rgb, src.a);\n    fragColor = TDOutputSwizzle(col);\n}\n"
+    },
+    {
+      "id": "pixel_two_inputs",
+      "shader_type": "pixel",
+      "input_count": 2,
+      "description": "Pixel shader blending two input TOPs by a uniform 'mix_amount'. Add a Vectors/Constants param on the GLSL TOP with Uniform Name = mix_amount to drive it from a CHOP or slider.",
+      "uniforms_used": ["vUV", "sTD2DInputs", "mix_amount (custom)"],
+      "code": "// Pixel shader for GLSL TOP — 2 inputs, blended by a custom uniform.\n// Add a Vectors parameter to the GLSL TOP with Uniform Name = \"mix_amount\".\n\nuniform float mix_amount;\n\nout vec4 fragColor;\n\nvoid main() {\n    vec2 uv = vUV.st;\n    vec4 a = texture(sTD2DInputs[0], uv);\n    vec4 b = texture(sTD2DInputs[1], uv);\n    fragColor = TDOutputSwizzle(mix(a, b, mix_amount));\n}\n"
+    },
+    {
+      "id": "compute_basic",
+      "shader_type": "compute",
+      "input_count": 0,
+      "description": "Compute shader writing into mTDComputeOutputs[0]. Set Shader Type = Compute Shader on the GLSL TOP. Local size 8x8 is a sane default; tune for your output resolution.",
+      "uniforms_used": ["uTime", "uTDOutputInfo", "mTDComputeOutputs"],
+      "code": "// Compute shader for GLSL TOP. Set the op's Shader Type to Compute Shader.\n// Output goes into mTDComputeOutputs[0]; reading inputs uses sTD2DInputs[N] same as pixel.\n\nlayout(local_size_x = 8, local_size_y = 8) in;\n\nvoid main() {\n    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);\n    vec2 res = vec2(uTDOutputInfo.res.zw);\n    if (coord.x >= int(res.x) || coord.y >= int(res.y)) return;\n\n    vec2 uv = vec2(coord) / res;\n    vec3 col = vec3(uv, 0.5 + 0.5 * sin(uTime));\n    imageStore(mTDComputeOutputs[0], coord, TDOutputSwizzle(vec4(col, 1.0)));\n}\n"
+    }
+  ],
+  "uniforms_reference": [
+    {"name": "uTime", "type": "float", "scope": "global", "desc": "Project absolute time in seconds since start."},
+    {"name": "uTDPass", "type": "int", "scope": "global", "desc": "Current pass index when using multi-pass cooking."},
+    {"name": "vUV", "type": "vec4 (varying)", "scope": "pixel/vertex", "desc": "Interpolated UV coords from the vertex shader. Use vUV.st for 2D coords (0..1)."},
+    {"name": "sTD2DInputs[N]", "type": "sampler2D[]", "scope": "pixel/compute", "desc": "Array of input TOPs samplers. sTD2DInputs[0] = first input, etc. Use texture() not the deprecated texture2D()."},
+    {"name": "uTDOutputInfo", "type": "struct", "scope": "all", "desc": "Output info struct. uTDOutputInfo.res.zw = output (width, height) in pixels; .res.xy = 1/(w,h) for normalization."},
+    {"name": "mTDComputeOutputs[N]", "type": "image2D[]", "scope": "compute", "desc": "Write-target images for compute shaders. Use imageStore(mTDComputeOutputs[i], coord, color)."},
+    {"name": "TDOutputSwizzle(vec4)", "type": "function", "scope": "all", "desc": "MANDATORY final wrapper on any color you write to fragColor or imageStore. Applies TD's color management swizzle. Skipping it will silently produce wrong colors on some output pipelines."},
+    {"name": "<custom uniform>", "type": "any", "scope": "depends", "desc": "Declare with `uniform <type> <name>;` and bind via the GLSL TOP's Vectors / Constants params (Uniform Name field)."}
+  ],
+  "antipatterns": [
+    {
+      "id": "missing_TDOutputSwizzle",
+      "desc": "TD requires TDOutputSwizzle() on every fragColor / imageStore color. Without it, colors look wrong (typically too dark, or RGB swapped) in certain TD output paths even if it looks fine in the viewer.",
+      "wrong": "fragColor = vec4(col, 1.0);",
+      "right": "fragColor = TDOutputSwizzle(vec4(col, 1.0));"
+    },
+    {
+      "id": "texture2D_deprecated",
+      "desc": "texture2D() is GLSL ES 1.0 / pre-130 syntax. TD GLSL TOP uses GLSL 330+. Use texture() instead.",
+      "wrong": "texture2D(sTD2DInputs[0], uv)",
+      "right": "texture(sTD2DInputs[0], uv)"
+    },
+    {
+      "id": "manual_version_directive",
+      "desc": "Adding #version yourself conflicts with TD's auto-prepended header. Let TD inject it.",
+      "wrong": "#version 330 core\\nout vec4 fragColor;",
+      "right": "out vec4 fragColor;  // no #version directive"
+    },
+    {
+      "id": "compute_missing_local_size",
+      "desc": "Compute shaders require a layout(local_size_x/y/z) declaration. Without it, the shader will not compile.",
+      "wrong": "void main() { ... }  // bare compute entry",
+      "right": "layout(local_size_x = 8, local_size_y = 8) in;\\nvoid main() { ... }"
+    },
+    {
+      "id": "compute_no_bounds_check",
+      "desc": "When dispatch size doesn't match output resolution exactly, threads outside the output write garbage or skip writes. Always early-return on out-of-bounds.",
+      "wrong": "void main() { ivec2 c = ivec2(gl_GlobalInvocationID.xy); imageStore(mTDComputeOutputs[0], c, col); }",
+      "right": "vec2 res = vec2(uTDOutputInfo.res.zw);\\nif (coord.x >= int(res.x) || coord.y >= int(res.y)) return;"
+    }
+  ]
+}

@@ -9,6 +9,7 @@ from mcp.server.fastmcp import FastMCP, Image
 
 from td_mcp import __version__
 from td_mcp.bridge import bridge
+from td_mcp.kb.glsl import get_glsl_kb
 from td_mcp.kb.operators import OperatorEntry, OperatorsCatalog, get_catalog, reload_catalog
 from td_mcp.protocol import TDError
 
@@ -394,4 +395,45 @@ print(json.dumps({'build': getattr(app, 'build', ''), 'operators': ops}))
         "count": len(entries),
         "td_build": data.get("build", ""),
         "by_family": catalog.family_counts(),
+    }
+
+
+@mcp.tool()
+async def kb_glsl_template(template_id: str = "") -> dict:
+    """Return a vetted GLSL TOP skeleton — or the full index if template_id is empty.
+
+    Without template_id: returns the catalog of available templates plus the
+    full uniforms reference and antipatterns list. Use this first to discover
+    what's available.
+
+    With template_id: returns the template's code + which uniforms it uses +
+    the antipatterns relevant to this shader type. Copy the code into the
+    GLSL TOP's pixeldat/computedat target DAT.
+    """
+    kb = get_glsl_kb()
+    if not template_id:
+        return {
+            "ok": True,
+            "templates": kb.index(),
+            "uniforms_reference": [u.model_dump() for u in kb.uniforms],
+            "antipatterns": [a.model_dump() for a in kb.antipatterns],
+        }
+    tpl = kb.get(template_id)
+    if tpl is None:
+        return {
+            "ok": False,
+            "error": f"Unknown template id: {template_id!r}",
+            "available": [t.id for t in kb.templates],
+        }
+    # Surface antipatterns that match this shader type
+    relevant = [
+        a.model_dump()
+        for a in kb.antipatterns
+        if (tpl.shader_type == "compute" and a.id.startswith("compute_"))
+        or (tpl.shader_type != "compute" and not a.id.startswith("compute_"))
+    ]
+    return {
+        "ok": True,
+        "template": tpl.model_dump(),
+        "applicable_antipatterns": relevant,
     }
