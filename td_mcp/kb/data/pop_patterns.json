@@ -43,6 +43,48 @@
         "Animating period vs amplitude gives very different looks: animating period feels like 'morphing terrain', animating amplitude feels like 'breathing'."
       ],
       "verified_on_build": "2025.32820"
+    },
+    {
+      "id": "chop_to_pop_basic",
+      "name": "CHOP → POP cross-family bridge (constantCHOP + choptoPOP → outPOP)",
+      "description": "Convert a CHOP's channel values into POP points/attributes via choptoPOP. Foundation for audio-reactive POP work — replace constantCHOP with audiofilterCHOP / analyzeCHOP / fft outputs to drive POP attributes from sound.",
+      "tags": ["cross-family", "chop-input", "audio-reactive-base"],
+      "difficulty": "easy",
+      "ops": [
+        {"name": "src", "op_type": "constantCHOP", "params": {}},
+        {"name": "c2p", "op_type": "choptoPOP", "params": {"chop": "src"}},
+        {"name": "out1", "op_type": "outPOP", "params": {}}
+      ],
+      "connections": [
+        {"out": "c2p", "into": "out1"}
+      ],
+      "notes": "choptoPOP has ZERO wire inputs — the CHOP source is bound via the `chop` param as a relative or absolute op path. The `src` value here is a sibling-relative path that TD resolves against c2p's parent. This is the convention for ALL cross-family ingestion POPs (choptoPOP, toptoPOP, dattoPOP, soptoPOP).",
+      "pitfalls": [
+        "Wiring a CHOP into choptoPOP via td_connect_ops will fail or silently no-op — choptoPOP has 0 inputConnectors. Use td_set_param chop=<path> instead.",
+        "Path is resolved against the choptoPOP's parent, not the project root. If you move the pattern into a different wrapper, the relative path stays valid; absolute paths don't."
+      ],
+      "verified_on_build": "2025.32820"
+    },
+    {
+      "id": "top_to_pop_basic",
+      "name": "TOP → POP cross-family bridge (noiseTOP + toptoPOP → outPOP)",
+      "description": "Convert a TOP's pixels into POP points (one point per pixel or sampled subset). Foundation for depth-to-points work, video-reactive particles, and any workflow where the visual source lives in TOP space.",
+      "tags": ["cross-family", "top-input", "video-reactive-base", "depth-to-points-base"],
+      "difficulty": "easy",
+      "ops": [
+        {"name": "src", "op_type": "noiseTOP", "params": {}},
+        {"name": "t2p", "op_type": "toptoPOP", "params": {"input0top": "src"}},
+        {"name": "out1", "op_type": "outPOP", "params": {}}
+      ],
+      "connections": [
+        {"out": "t2p", "into": "out1"}
+      ],
+      "notes": "toptoPOP follows the same param-not-wire convention as choptoPOP — the source TOP is bound via `input0top` (note the indexed naming, hinting at multi-TOP variants). Swap noiseTOP for a kinectTOP or realsenseTOP / nidepthTOP to get true depth-to-points; swap for a moviefileinTOP to get video-driven points.",
+      "pitfalls": [
+        "toptoPOP has 0 inputConnectors. Use td_set_param input0top=<path>, NOT td_connect_ops.",
+        "Default sampling reads ALL pixels — at 1920×1080 that's 2M points, which can tank framerate. Downsample the source TOP (resolutionTOP) before feeding into toptoPOP for interactive work, or set toptoPOP's sampling/density params."
+      ],
+      "verified_on_build": "2025.32820"
     }
   ]
 }
