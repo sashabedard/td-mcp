@@ -27,6 +27,7 @@ ingest = [
     "trafilatura>=1.12",
     "playwright>=1.47",
     "yt-dlp>=2024.10.0",
+    "openai-whisper>=20240930",
 ]
 dev = [
     "pytest>=8.0",

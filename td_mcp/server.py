@@ -577,3 +577,79 @@ async def kb_wiki_status() -> dict:
     from td_mcp.ingest.wiki import manifest
 
     return {"ok": True, **manifest()}
+
+
+@mcp.tool()
+async def kb_list_youtube_sources() -> dict:
+    """List configured YouTube channels and playlists for ingestion."""
+    from td_mcp.ingest.youtube import load_sources
+
+    return {"ok": True, **load_sources()}
+
+
+@mcp.tool()
+async def kb_ingest_youtube_channel(
+    handle: str = "OkamirufuV",
+    limit: int = 1,
+    model: str | None = None,
+) -> dict:
+    """Download audio + transcribe up to `limit` videos from a YouTube channel.
+
+    Resumes from cache: videos already downloaded skip download; videos
+    already transcribed skip transcription. Defaults to 1 video to keep
+    interactive calls bounded. Use limit=0 (or large N) for a full batch
+    — that's a background job (CPU: ~5x realtime, GPU: ~30x realtime).
+
+    `model` overrides TD_MCP_WHISPER_MODEL. Options: tiny | base | small |
+    medium | large-v3. Bigger = slower + better transcription quality.
+    Defaults to "base" (~140MB, balanced for iteration).
+
+    Does NOT reindex — call kb_reindex afterward to fold the new chunks
+    into the vector store.
+    """
+    from td_mcp.ingest.youtube import (
+        DEFAULT_WHISPER_MODEL,
+        download_audio,
+        list_channel_videos,
+        load_sources,
+        manifest,
+        transcribe,
+    )
+
+    sources = load_sources()
+    channel = next((c for c in sources["channels"] if c["handle"] == handle), None)
+    if channel is None:
+        return {
+            "ok": False,
+            "error": f"Unknown channel handle: {handle!r}",
+            "available": [c["handle"] for c in sources["channels"]],
+        }
+
+    videos = list_channel_videos(channel["url"], limit=limit if limit > 0 else None)
+    if not videos:
+        return {"ok": False, "error": "No videos returned from channel"}
+
+    use_model = model or DEFAULT_WHISPER_MODEL
+    processed = []
+    for v in videos:
+        audio = download_audio(v, handle)
+        transcribe(audio, model_name=use_model)
+        processed.append({"video_id": v.video_id, "title": v.title, "duration_sec": v.duration_sec})
+
+    return {
+        "ok": True,
+        "channel": handle,
+        "model": use_model,
+        "processed_count": len(processed),
+        "processed": processed,
+        "cache": manifest(),
+        "next_step": "Call kb_reindex to fold tutorial chunks into the vector store.",
+    }
+
+
+@mcp.tool()
+async def kb_youtube_status() -> dict:
+    """Report on the local YouTube cache: channels, total videos, transcribed count."""
+    from td_mcp.ingest.youtube import manifest
+
+    return {"ok": True, **manifest()}

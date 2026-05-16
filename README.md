@@ -65,6 +65,7 @@ Copies (not symlinks) into `~/.claude/skills/`. Re-run after pulling changes. Re
 - [x] Phase 3.7 — Sub-KB GLSL TOP + templates
 - [~] Phase 4 — Vector KB infra (LanceDB + BGE-M3) seeded from structured KBs
 - [~] Phase 4.1 — derivative.ca wiki ingest for POPs (100 pages); other families pending
+- [~] Phase 4.2 — YouTube ingest pipeline (yt-dlp + openai-whisper); seeded with 4 OkamirufuV POP tutorials
 - [ ] Phase 4.5 — Visual techniques curated (80-150 entries)
 - [ ] Phase 5 — Workflow patterns curated (30-50, non-POP)
 - [ ] Phase 6a — Vibe loop (set_reference, iterate, visual_diff)

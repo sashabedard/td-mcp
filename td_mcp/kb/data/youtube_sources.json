@@ -1,0 +1,12 @@
+{
+  "version": "0.1",
+  "channels": [
+    {
+      "handle": "OkamirufuV",
+      "url": "https://www.youtube.com/@OkamirufuV/videos",
+      "tags": ["POP", "particles", "instancing", "procedural", "tutorial"],
+      "notes": "TouchDesigner artist — short POP-focused tutorials (5-15 min). Practical recipes complementing the wiki's abstract docs."
+    }
+  ],
+  "playlists": []
+}

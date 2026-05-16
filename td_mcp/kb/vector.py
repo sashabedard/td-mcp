@@ -273,4 +273,9 @@ def build_seed_chunks() -> list[Chunk]:
 
     chunks.extend(build_wiki_chunks_from_cache())
 
+    # YouTube tutorial chunks from cache (kb_ingest_youtube_channel populates)
+    from td_mcp.ingest.youtube import build_chunks_from_cache as build_yt_chunks
+
+    chunks.extend(build_yt_chunks())
+
     return chunks
