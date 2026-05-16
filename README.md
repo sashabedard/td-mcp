@@ -58,7 +58,7 @@ Copies (not symlinks) into `~/.claude/skills/`. Re-run after pulling changes. Re
 - [x] Phase 0 — boilerplate, ping
 - [ ] Phase 1 — bridge live (connect, status, inspect, create, mutate, connect ops, delete)
 - [ ] Phase 2 — screenshot, cook stats
-- [ ] Phase 2.5 — checkpoint/rollback
+- [x] Phase 2.5 — checkpoint/rollback
 - [x] Phase 3.5 — Skills authoring (`~/.claude/skills/touchdesigner*/`)
 - [ ] Phase 3.6 — Sub-KB POPs + skill + 15-25 curated patterns
 - [x] Phase 3 — KB operators structured (LanceDB + Pydantic validation)
