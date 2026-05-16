@@ -56,12 +56,12 @@ Copies (not symlinks) into `~/.claude/skills/`. Re-run after pulling changes. Re
 ## Status of phases
 
 - [x] Phase 0 — boilerplate, ping
-- [ ] Phase 1 — bridge live (connect, status, inspect, create, mutate, connect ops, delete)
-- [ ] Phase 2 — screenshot, cook stats
+- [x] Phase 1 — bridge live (connect, status, inspect, create, mutate, connect ops, delete)
+- [x] Phase 2 — screenshot, cook stats
 - [x] Phase 2.5 — checkpoint/rollback
+- [x] Phase 3 — KB operators structured (Pydantic catalog + typed validation)
 - [x] Phase 3.5 — Skills authoring (`~/.claude/skills/touchdesigner*/`)
-- [ ] Phase 3.6 — Sub-KB POPs + skill + 15-25 curated patterns
-- [x] Phase 3 — KB operators structured (LanceDB + Pydantic validation)
+- [ ] Phase 3.6 — Sub-KB POPs + 15-25 curated patterns
 - [x] Phase 3.7 — Sub-KB GLSL TOP + templates
 - [ ] Phase 4 — Vector KB ingestion (hybrid search + reranker)
 - [ ] Phase 4.5 — Visual techniques curated (80-150 entries)
