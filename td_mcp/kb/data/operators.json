@@ -1,0 +1,3431 @@
+{
+  "version": "1.0",
+  "td_build": "2025.32820",
+  "count": 683,
+  "by_family": {
+    "CHOP": 184,
+    "POP": 101,
+    "COMP": 42,
+    "SOP": 115,
+    "TOP": 148,
+    "DAT": 75,
+    "MAT": 18
+  },
+  "operators": [
+    {
+      "python_class": "abletonlinkCHOP",
+      "family": "CHOP",
+      "subtype": "abletonlink"
+    },
+    {
+      "python_class": "analyzeCHOP",
+      "family": "CHOP",
+      "subtype": "analyze"
+    },
+    {
+      "python_class": "angleCHOP",
+      "family": "CHOP",
+      "subtype": "angle"
+    },
+    {
+      "python_class": "attributeCHOP",
+      "family": "CHOP",
+      "subtype": "attribute"
+    },
+    {
+      "python_class": "audiobandeqCHOP",
+      "family": "CHOP",
+      "subtype": "audiobandeq"
+    },
+    {
+      "python_class": "audiobinauralCHOP",
+      "family": "CHOP",
+      "subtype": "audiobinaural"
+    },
+    {
+      "python_class": "audiodeviceinCHOP",
+      "family": "CHOP",
+      "subtype": "audiodevicein"
+    },
+    {
+      "python_class": "audiodeviceoutCHOP",
+      "family": "CHOP",
+      "subtype": "audiodeviceout"
+    },
+    {
+      "python_class": "audiodynamicsCHOP",
+      "family": "CHOP",
+      "subtype": "audiodynamics"
+    },
+    {
+      "python_class": "audioenvelopeCHOP",
+      "family": "CHOP",
+      "subtype": "audioenvelope"
+    },
+    {
+      "python_class": "audiofileinCHOP",
+      "family": "CHOP",
+      "subtype": "audiofilein"
+    },
+    {
+      "python_class": "audiofileoutCHOP",
+      "family": "CHOP",
+      "subtype": "audiofileout"
+    },
+    {
+      "python_class": "audiofilterCHOP",
+      "family": "CHOP",
+      "subtype": "audiofilter"
+    },
+    {
+      "python_class": "audiomixCHOP",
+      "family": "CHOP",
+      "subtype": "audiomix"
+    },
+    {
+      "python_class": "audiomovieCHOP",
+      "family": "CHOP",
+      "subtype": "audiomovie"
+    },
+    {
+      "python_class": "audiondiCHOP",
+      "family": "CHOP",
+      "subtype": "audiondi"
+    },
+    {
+      "python_class": "audiooscillatorCHOP",
+      "family": "CHOP",
+      "subtype": "audiooscillator"
+    },
+    {
+      "python_class": "audioparaeqCHOP",
+      "family": "CHOP",
+      "subtype": "audioparaeq"
+    },
+    {
+      "python_class": "audiopitchshiftCHOP",
+      "family": "CHOP",
+      "subtype": "audiopitchshift"
+    },
+    {
+      "python_class": "audioplayCHOP",
+      "family": "CHOP",
+      "subtype": "audioplay"
+    },
+    {
+      "python_class": "audiorenderCHOP",
+      "family": "CHOP",
+      "subtype": "audiorender"
+    },
+    {
+      "python_class": "audiospectrumCHOP",
+      "family": "CHOP",
+      "subtype": "audiospectrum"
+    },
+    {
+      "python_class": "audiostreaminCHOP",
+      "family": "CHOP",
+      "subtype": "audiostreamin"
+    },
+    {
+      "python_class": "audiostreamoutCHOP",
+      "family": "CHOP",
+      "subtype": "audiostreamout"
+    },
+    {
+      "python_class": "audiovstCHOP",
+      "family": "CHOP",
+      "subtype": "audiovst"
+    },
+    {
+      "python_class": "audiowebrenderCHOP",
+      "family": "CHOP",
+      "subtype": "audiowebrender"
+    },
+    {
+      "python_class": "bandeqCHOP",
+      "family": "CHOP",
+      "subtype": "bandeq"
+    },
+    {
+      "python_class": "beatCHOP",
+      "family": "CHOP",
+      "subtype": "beat"
+    },
+    {
+      "python_class": "bindCHOP",
+      "family": "CHOP",
+      "subtype": "bind"
+    },
+    {
+      "python_class": "blacktraxCHOP",
+      "family": "CHOP",
+      "subtype": "blacktrax"
+    },
+    {
+      "python_class": "blendCHOP",
+      "family": "CHOP",
+      "subtype": "blend"
+    },
+    {
+      "python_class": "blobtrackCHOP",
+      "family": "CHOP",
+      "subtype": "blobtrack"
+    },
+    {
+      "python_class": "bodytrackCHOP",
+      "family": "CHOP",
+      "subtype": "bodytrack"
+    },
+    {
+      "python_class": "bulletsolverCHOP",
+      "family": "CHOP",
+      "subtype": "bulletsolver"
+    },
+    {
+      "python_class": "clipCHOP",
+      "family": "CHOP",
+      "subtype": "clip"
+    },
+    {
+      "python_class": "clipblender67CHOP",
+      "family": "CHOP",
+      "subtype": "clipblender67"
+    },
+    {
+      "python_class": "clipblenderCHOP",
+      "family": "CHOP",
+      "subtype": "clipblender"
+    },
+    {
+      "python_class": "clipblenderosCHOP",
+      "family": "CHOP",
+      "subtype": "clipblenderos"
+    },
+    {
+      "python_class": "clockCHOP",
+      "family": "CHOP",
+      "subtype": "clock"
+    },
+    {
+      "python_class": "compositeCHOP",
+      "family": "CHOP",
+      "subtype": "composite"
+    },
+    {
+      "python_class": "constantCHOP",
+      "family": "CHOP",
+      "subtype": "constant"
+    },
+    {
+      "python_class": "copyCHOP",
+      "family": "CHOP",
+      "subtype": "copy"
+    },
+    {
+      "python_class": "countCHOP",
+      "family": "CHOP",
+      "subtype": "count"
+    },
+    {
+      "python_class": "cplusplusCHOP",
+      "family": "CHOP",
+      "subtype": "cplusplus"
+    },
+    {
+      "python_class": "crossCHOP",
+      "family": "CHOP",
+      "subtype": "cross"
+    },
+    {
+      "python_class": "cycleCHOP",
+      "family": "CHOP",
+      "subtype": "cycle"
+    },
+    {
+      "python_class": "dattoCHOP",
+      "family": "CHOP",
+      "subtype": "datto"
+    },
+    {
+      "python_class": "delayCHOP",
+      "family": "CHOP",
+      "subtype": "delay"
+    },
+    {
+      "python_class": "deleteCHOP",
+      "family": "CHOP",
+      "subtype": "delete"
+    },
+    {
+      "python_class": "dmxinCHOP",
+      "family": "CHOP",
+      "subtype": "dmxin"
+    },
+    {
+      "python_class": "dmxoutCHOP",
+      "family": "CHOP",
+      "subtype": "dmxout"
+    },
+    {
+      "python_class": "engineoutCHOP",
+      "family": "CHOP",
+      "subtype": "engineout"
+    },
+    {
+      "python_class": "envelopeCHOP",
+      "family": "CHOP",
+      "subtype": "envelope"
+    },
+    {
+      "python_class": "etherdreamCHOP",
+      "family": "CHOP",
+      "subtype": "etherdream"
+    },
+    {
+      "python_class": "eventCHOP",
+      "family": "CHOP",
+      "subtype": "event"
+    },
+    {
+      "python_class": "expressionCHOP",
+      "family": "CHOP",
+      "subtype": "expression"
+    },
+    {
+      "python_class": "extendCHOP",
+      "family": "CHOP",
+      "subtype": "extend"
+    },
+    {
+      "python_class": "facetrackCHOP",
+      "family": "CHOP",
+      "subtype": "facetrack"
+    },
+    {
+      "python_class": "fanCHOP",
+      "family": "CHOP",
+      "subtype": "fan"
+    },
+    {
+      "python_class": "feedbackCHOP",
+      "family": "CHOP",
+      "subtype": "feedback"
+    },
+    {
+      "python_class": "fileinCHOP",
+      "family": "CHOP",
+      "subtype": "filein"
+    },
+    {
+      "python_class": "fileoutCHOP",
+      "family": "CHOP",
+      "subtype": "fileout"
+    },
+    {
+      "python_class": "filterCHOP",
+      "family": "CHOP",
+      "subtype": "filter"
+    },
+    {
+      "python_class": "freedinCHOP",
+      "family": "CHOP",
+      "subtype": "freedin"
+    },
+    {
+      "python_class": "freedoutCHOP",
+      "family": "CHOP",
+      "subtype": "freedout"
+    },
+    {
+      "python_class": "functionCHOP",
+      "family": "CHOP",
+      "subtype": "function"
+    },
+    {
+      "python_class": "gestureCHOP",
+      "family": "CHOP",
+      "subtype": "gesture"
+    },
+    {
+      "python_class": "handleCHOP",
+      "family": "CHOP",
+      "subtype": "handle"
+    },
+    {
+      "python_class": "heliosdacCHOP",
+      "family": "CHOP",
+      "subtype": "heliosdac"
+    },
+    {
+      "python_class": "hogCHOP",
+      "family": "CHOP",
+      "subtype": "hog"
+    },
+    {
+      "python_class": "hokuyoCHOP",
+      "family": "CHOP",
+      "subtype": "hokuyo"
+    },
+    {
+      "python_class": "holdCHOP",
+      "family": "CHOP",
+      "subtype": "hold"
+    },
+    {
+      "python_class": "importselectCHOP",
+      "family": "CHOP",
+      "subtype": "importselect"
+    },
+    {
+      "python_class": "inCHOP",
+      "family": "CHOP",
+      "subtype": "in"
+    },
+    {
+      "python_class": "infoCHOP",
+      "family": "CHOP",
+      "subtype": "info"
+    },
+    {
+      "python_class": "interpolateCHOP",
+      "family": "CHOP",
+      "subtype": "interpolate"
+    },
+    {
+      "python_class": "inversecurveCHOP",
+      "family": "CHOP",
+      "subtype": "inversecurve"
+    },
+    {
+      "python_class": "inversekinCHOP",
+      "family": "CHOP",
+      "subtype": "inversekin"
+    },
+    {
+      "python_class": "joinCHOP",
+      "family": "CHOP",
+      "subtype": "join"
+    },
+    {
+      "python_class": "joystickCHOP",
+      "family": "CHOP",
+      "subtype": "joystick"
+    },
+    {
+      "python_class": "keyboardinCHOP",
+      "family": "CHOP",
+      "subtype": "keyboardin"
+    },
+    {
+      "python_class": "keyframeCHOP",
+      "family": "CHOP",
+      "subtype": "keyframe"
+    },
+    {
+      "python_class": "kinectCHOP",
+      "family": "CHOP",
+      "subtype": "kinect"
+    },
+    {
+      "python_class": "kinectazureCHOP",
+      "family": "CHOP",
+      "subtype": "kinectazure"
+    },
+    {
+      "python_class": "lagCHOP",
+      "family": "CHOP",
+      "subtype": "lag"
+    },
+    {
+      "python_class": "laserCHOP",
+      "family": "CHOP",
+      "subtype": "laser"
+    },
+    {
+      "python_class": "laserdeviceCHOP",
+      "family": "CHOP",
+      "subtype": "laserdevice"
+    },
+    {
+      "python_class": "leapmotionCHOP",
+      "family": "CHOP",
+      "subtype": "leapmotion"
+    },
+    {
+      "python_class": "legacyoscillatorCHOP",
+      "family": "CHOP",
+      "subtype": "legacyoscillator"
+    },
+    {
+      "python_class": "leuzerod4CHOP",
+      "family": "CHOP",
+      "subtype": "leuzerod4"
+    },
+    {
+      "python_class": "lfoCHOP",
+      "family": "CHOP",
+      "subtype": "lfo"
+    },
+    {
+      "python_class": "limitCHOP",
+      "family": "CHOP",
+      "subtype": "limit"
+    },
+    {
+      "python_class": "logicCHOP",
+      "family": "CHOP",
+      "subtype": "logic"
+    },
+    {
+      "python_class": "lookupCHOP",
+      "family": "CHOP",
+      "subtype": "lookup"
+    },
+    {
+      "python_class": "ltcinCHOP",
+      "family": "CHOP",
+      "subtype": "ltcin"
+    },
+    {
+      "python_class": "ltcoutCHOP",
+      "family": "CHOP",
+      "subtype": "ltcout"
+    },
+    {
+      "python_class": "mathCHOP",
+      "family": "CHOP",
+      "subtype": "math"
+    },
+    {
+      "python_class": "mergeCHOP",
+      "family": "CHOP",
+      "subtype": "merge"
+    },
+    {
+      "python_class": "midiinCHOP",
+      "family": "CHOP",
+      "subtype": "midiin"
+    },
+    {
+      "python_class": "midiinmapCHOP",
+      "family": "CHOP",
+      "subtype": "midiinmap"
+    },
+    {
+      "python_class": "midioutCHOP",
+      "family": "CHOP",
+      "subtype": "midiout"
+    },
+    {
+      "python_class": "mosysCHOP",
+      "family": "CHOP",
+      "subtype": "mosys"
+    },
+    {
+      "python_class": "mouseinCHOP",
+      "family": "CHOP",
+      "subtype": "mousein"
+    },
+    {
+      "python_class": "mouseoutCHOP",
+      "family": "CHOP",
+      "subtype": "mouseout"
+    },
+    {
+      "python_class": "ncamCHOP",
+      "family": "CHOP",
+      "subtype": "ncam"
+    },
+    {
+      "python_class": "noiseCHOP",
+      "family": "CHOP",
+      "subtype": "noise"
+    },
+    {
+      "python_class": "nullCHOP",
+      "family": "CHOP",
+      "subtype": "null"
+    },
+    {
+      "python_class": "oakdeviceCHOP",
+      "family": "CHOP",
+      "subtype": "oakdevice"
+    },
+    {
+      "python_class": "oakselectCHOP",
+      "family": "CHOP",
+      "subtype": "oakselect"
+    },
+    {
+      "python_class": "objectCHOP",
+      "family": "CHOP",
+      "subtype": "object"
+    },
+    {
+      "python_class": "oculusaudioCHOP",
+      "family": "CHOP",
+      "subtype": "oculusaudio"
+    },
+    {
+      "python_class": "oculusriftCHOP",
+      "family": "CHOP",
+      "subtype": "oculusrift"
+    },
+    {
+      "python_class": "openvrCHOP",
+      "family": "CHOP",
+      "subtype": "openvr"
+    },
+    {
+      "python_class": "optitrackinCHOP",
+      "family": "CHOP",
+      "subtype": "optitrackin"
+    },
+    {
+      "python_class": "oscinCHOP",
+      "family": "CHOP",
+      "subtype": "oscin"
+    },
+    {
+      "python_class": "oscoutCHOP",
+      "family": "CHOP",
+      "subtype": "oscout"
+    },
+    {
+      "python_class": "outCHOP",
+      "family": "CHOP",
+      "subtype": "out"
+    },
+    {
+      "python_class": "overrideCHOP",
+      "family": "CHOP",
+      "subtype": "override"
+    },
+    {
+      "python_class": "panelCHOP",
+      "family": "CHOP",
+      "subtype": "panel"
+    },
+    {
+      "python_class": "pangolinCHOP",
+      "family": "CHOP",
+      "subtype": "pangolin"
+    },
+    {
+      "python_class": "pantiltCHOP",
+      "family": "CHOP",
+      "subtype": "pantilt"
+    },
+    {
+      "python_class": "parameterCHOP",
+      "family": "CHOP",
+      "subtype": "parameter"
+    },
+    {
+      "python_class": "parametriceqCHOP",
+      "family": "CHOP",
+      "subtype": "parametriceq"
+    },
+    {
+      "python_class": "passfilterCHOP",
+      "family": "CHOP",
+      "subtype": "passfilter"
+    },
+    {
+      "python_class": "patternCHOP",
+      "family": "CHOP",
+      "subtype": "pattern"
+    },
+    {
+      "python_class": "performCHOP",
+      "family": "CHOP",
+      "subtype": "perform"
+    },
+    {
+      "python_class": "phaserCHOP",
+      "family": "CHOP",
+      "subtype": "phaser"
+    },
+    {
+      "python_class": "phonemeCHOP",
+      "family": "CHOP",
+      "subtype": "phoneme"
+    },
+    {
+      "python_class": "pipeinCHOP",
+      "family": "CHOP",
+      "subtype": "pipein"
+    },
+    {
+      "python_class": "pipeoutCHOP",
+      "family": "CHOP",
+      "subtype": "pipeout"
+    },
+    {
+      "python_class": "pitchCHOP",
+      "family": "CHOP",
+      "subtype": "pitch"
+    },
+    {
+      "python_class": "poptoCHOP",
+      "family": "CHOP",
+      "subtype": "popto"
+    },
+    {
+      "python_class": "posistagenetCHOP",
+      "family": "CHOP",
+      "subtype": "posistagenet"
+    },
+    {
+      "python_class": "pulseCHOP",
+      "family": "CHOP",
+      "subtype": "pulse"
+    },
+    {
+      "python_class": "realsenseCHOP",
+      "family": "CHOP",
+      "subtype": "realsense"
+    },
+    {
+      "python_class": "recordCHOP",
+      "family": "CHOP",
+      "subtype": "record"
+    },
+    {
+      "python_class": "renameCHOP",
+      "family": "CHOP",
+      "subtype": "rename"
+    },
+    {
+      "python_class": "renderpickCHOP",
+      "family": "CHOP",
+      "subtype": "renderpick"
+    },
+    {
+      "python_class": "renderstreaminCHOP",
+      "family": "CHOP",
+      "subtype": "renderstreamin"
+    },
+    {
+      "python_class": "reorderCHOP",
+      "family": "CHOP",
+      "subtype": "reorder"
+    },
+    {
+      "python_class": "replaceCHOP",
+      "family": "CHOP",
+      "subtype": "replace"
+    },
+    {
+      "python_class": "resampleCHOP",
+      "family": "CHOP",
+      "subtype": "resample"
+    },
+    {
+      "python_class": "scanCHOP",
+      "family": "CHOP",
+      "subtype": "scan"
+    },
+    {
+      "python_class": "scriptCHOP",
+      "family": "CHOP",
+      "subtype": "script"
+    },
+    {
+      "python_class": "scurveCHOP",
+      "family": "CHOP",
+      "subtype": "scurve"
+    },
+    {
+      "python_class": "selectCHOP",
+      "family": "CHOP",
+      "subtype": "select"
+    },
+    {
+      "python_class": "sequencerCHOP",
+      "family": "CHOP",
+      "subtype": "sequencer"
+    },
+    {
+      "python_class": "serialCHOP",
+      "family": "CHOP",
+      "subtype": "serial"
+    },
+    {
+      "python_class": "sharedmeminCHOP",
+      "family": "CHOP",
+      "subtype": "sharedmemin"
+    },
+    {
+      "python_class": "sharedmemoutCHOP",
+      "family": "CHOP",
+      "subtype": "sharedmemout"
+    },
+    {
+      "python_class": "shiftCHOP",
+      "family": "CHOP",
+      "subtype": "shift"
+    },
+    {
+      "python_class": "shuffleCHOP",
+      "family": "CHOP",
+      "subtype": "shuffle"
+    },
+    {
+      "python_class": "slopeCHOP",
+      "family": "CHOP",
+      "subtype": "slope"
+    },
+    {
+      "python_class": "soptoCHOP",
+      "family": "CHOP",
+      "subtype": "sopto"
+    },
+    {
+      "python_class": "sortCHOP",
+      "family": "CHOP",
+      "subtype": "sort"
+    },
+    {
+      "python_class": "spectrumCHOP",
+      "family": "CHOP",
+      "subtype": "spectrum"
+    },
+    {
+      "python_class": "speedCHOP",
+      "family": "CHOP",
+      "subtype": "speed"
+    },
+    {
+      "python_class": "spliceCHOP",
+      "family": "CHOP",
+      "subtype": "splice"
+    },
+    {
+      "python_class": "springCHOP",
+      "family": "CHOP",
+      "subtype": "spring"
+    },
+    {
+      "python_class": "st2110deviceCHOP",
+      "family": "CHOP",
+      "subtype": "st2110device"
+    },
+    {
+      "python_class": "stretchCHOP",
+      "family": "CHOP",
+      "subtype": "stretch"
+    },
+    {
+      "python_class": "stypeinCHOP",
+      "family": "CHOP",
+      "subtype": "stypein"
+    },
+    {
+      "python_class": "stypeoutCHOP",
+      "family": "CHOP",
+      "subtype": "stypeout"
+    },
+    {
+      "python_class": "switchCHOP",
+      "family": "CHOP",
+      "subtype": "switch"
+    },
+    {
+      "python_class": "syncinCHOP",
+      "family": "CHOP",
+      "subtype": "syncin"
+    },
+    {
+      "python_class": "syncoutCHOP",
+      "family": "CHOP",
+      "subtype": "syncout"
+    },
+    {
+      "python_class": "tabletCHOP",
+      "family": "CHOP",
+      "subtype": "tablet"
+    },
+    {
+      "python_class": "timecodeCHOP",
+      "family": "CHOP",
+      "subtype": "timecode"
+    },
+    {
+      "python_class": "timelineCHOP",
+      "family": "CHOP",
+      "subtype": "timeline"
+    },
+    {
+      "python_class": "timerCHOP",
+      "family": "CHOP",
+      "subtype": "timer"
+    },
+    {
+      "python_class": "timesliceCHOP",
+      "family": "CHOP",
+      "subtype": "timeslice"
+    },
+    {
+      "python_class": "toptoCHOP",
+      "family": "CHOP",
+      "subtype": "topto"
+    },
+    {
+      "python_class": "touchinCHOP",
+      "family": "CHOP",
+      "subtype": "touchin"
+    },
+    {
+      "python_class": "touchoutCHOP",
+      "family": "CHOP",
+      "subtype": "touchout"
+    },
+    {
+      "python_class": "trailCHOP",
+      "family": "CHOP",
+      "subtype": "trail"
+    },
+    {
+      "python_class": "transformCHOP",
+      "family": "CHOP",
+      "subtype": "transform"
+    },
+    {
+      "python_class": "transformxyzCHOP",
+      "family": "CHOP",
+      "subtype": "transformxyz"
+    },
+    {
+      "python_class": "triggerCHOP",
+      "family": "CHOP",
+      "subtype": "trigger"
+    },
+    {
+      "python_class": "trimCHOP",
+      "family": "CHOP",
+      "subtype": "trim"
+    },
+    {
+      "python_class": "warpCHOP",
+      "family": "CHOP",
+      "subtype": "warp"
+    },
+    {
+      "python_class": "waveCHOP",
+      "family": "CHOP",
+      "subtype": "wave"
+    },
+    {
+      "python_class": "xblendCHOP",
+      "family": "CHOP",
+      "subtype": "xblend"
+    },
+    {
+      "python_class": "xclipblenderCHOP",
+      "family": "CHOP",
+      "subtype": "xclipblender"
+    },
+    {
+      "python_class": "zedCHOP",
+      "family": "CHOP",
+      "subtype": "zed"
+    },
+    {
+      "python_class": "actorCOMP",
+      "family": "COMP",
+      "subtype": "actor"
+    },
+    {
+      "python_class": "ambientlightCOMP",
+      "family": "COMP",
+      "subtype": "ambientlight"
+    },
+    {
+      "python_class": "animationCOMP",
+      "family": "COMP",
+      "subtype": "animation"
+    },
+    {
+      "python_class": "annotateCOMP",
+      "family": "COMP",
+      "subtype": "annotate"
+    },
+    {
+      "python_class": "baseCOMP",
+      "family": "COMP",
+      "subtype": "base"
+    },
+    {
+      "python_class": "blendCOMP",
+      "family": "COMP",
+      "subtype": "blend"
+    },
+    {
+      "python_class": "boneCOMP",
+      "family": "COMP",
+      "subtype": "bone"
+    },
+    {
+      "python_class": "bulletsolverCOMP",
+      "family": "COMP",
+      "subtype": "bulletsolver"
+    },
+    {
+      "python_class": "buttonCOMP",
+      "family": "COMP",
+      "subtype": "button"
+    },
+    {
+      "python_class": "cameraCOMP",
+      "family": "COMP",
+      "subtype": "camera"
+    },
+    {
+      "python_class": "camerablendCOMP",
+      "family": "COMP",
+      "subtype": "camerablend"
+    },
+    {
+      "python_class": "constraintCOMP",
+      "family": "COMP",
+      "subtype": "constraint"
+    },
+    {
+      "python_class": "containerCOMP",
+      "family": "COMP",
+      "subtype": "container"
+    },
+    {
+      "python_class": "engineCOMP",
+      "family": "COMP",
+      "subtype": "engine"
+    },
+    {
+      "python_class": "environmentlightCOMP",
+      "family": "COMP",
+      "subtype": "environmentlight"
+    },
+    {
+      "python_class": "fbxCOMP",
+      "family": "COMP",
+      "subtype": "fbx"
+    },
+    {
+      "python_class": "fieldCOMP",
+      "family": "COMP",
+      "subtype": "field"
+    },
+    {
+      "python_class": "forceCOMP",
+      "family": "COMP",
+      "subtype": "force"
+    },
+    {
+      "python_class": "geometryCOMP",
+      "family": "COMP",
+      "subtype": "geometry"
+    },
+    {
+      "python_class": "geotextCOMP",
+      "family": "COMP",
+      "subtype": "geotext"
+    },
+    {
+      "python_class": "glslCOMP",
+      "family": "COMP",
+      "subtype": "glsl"
+    },
+    {
+      "python_class": "graphCOMP",
+      "family": "COMP",
+      "subtype": "graph"
+    },
+    {
+      "python_class": "handleCOMP",
+      "family": "COMP",
+      "subtype": "handle"
+    },
+    {
+      "python_class": "lightCOMP",
+      "family": "COMP",
+      "subtype": "light"
+    },
+    {
+      "python_class": "listCOMP",
+      "family": "COMP",
+      "subtype": "list"
+    },
+    {
+      "python_class": "networkCOMP",
+      "family": "COMP",
+      "subtype": "network"
+    },
+    {
+      "python_class": "nullCOMP",
+      "family": "COMP",
+      "subtype": "null"
+    },
+    {
+      "python_class": "nvidiaflexsolverCOMP",
+      "family": "COMP",
+      "subtype": "nvidiaflexsolver"
+    },
+    {
+      "python_class": "nvidiaflowemitterCOMP",
+      "family": "COMP",
+      "subtype": "nvidiaflowemitter"
+    },
+    {
+      "python_class": "opviewerCOMP",
+      "family": "COMP",
+      "subtype": "opviewer"
+    },
+    {
+      "python_class": "parameterCOMP",
+      "family": "COMP",
+      "subtype": "parameter"
+    },
+    {
+      "python_class": "replicatorCOMP",
+      "family": "COMP",
+      "subtype": "replicator"
+    },
+    {
+      "python_class": "selectCOMP",
+      "family": "COMP",
+      "subtype": "select"
+    },
+    {
+      "python_class": "sharedmeminCOMP",
+      "family": "COMP",
+      "subtype": "sharedmemin"
+    },
+    {
+      "python_class": "sharedmemoutCOMP",
+      "family": "COMP",
+      "subtype": "sharedmemout"
+    },
+    {
+      "python_class": "sliderCOMP",
+      "family": "COMP",
+      "subtype": "slider"
+    },
+    {
+      "python_class": "tableCOMP",
+      "family": "COMP",
+      "subtype": "table"
+    },
+    {
+      "python_class": "textCOMP",
+      "family": "COMP",
+      "subtype": "text"
+    },
+    {
+      "python_class": "timeCOMP",
+      "family": "COMP",
+      "subtype": "time"
+    },
+    {
+      "python_class": "usdCOMP",
+      "family": "COMP",
+      "subtype": "usd"
+    },
+    {
+      "python_class": "widgetCOMP",
+      "family": "COMP",
+      "subtype": "widget"
+    },
+    {
+      "python_class": "windowCOMP",
+      "family": "COMP",
+      "subtype": "window"
+    },
+    {
+      "python_class": "artnetDAT",
+      "family": "DAT",
+      "subtype": "artnet"
+    },
+    {
+      "python_class": "audiodevicesDAT",
+      "family": "DAT",
+      "subtype": "audiodevices"
+    },
+    {
+      "python_class": "chopexecuteDAT",
+      "family": "DAT",
+      "subtype": "chopexecute"
+    },
+    {
+      "python_class": "choptoDAT",
+      "family": "DAT",
+      "subtype": "chopto"
+    },
+    {
+      "python_class": "clipDAT",
+      "family": "DAT",
+      "subtype": "clip"
+    },
+    {
+      "python_class": "convertDAT",
+      "family": "DAT",
+      "subtype": "convert"
+    },
+    {
+      "python_class": "cplusplusDAT",
+      "family": "DAT",
+      "subtype": "cplusplus"
+    },
+    {
+      "python_class": "datexecuteDAT",
+      "family": "DAT",
+      "subtype": "datexecute"
+    },
+    {
+      "python_class": "dmxmapDAT",
+      "family": "DAT",
+      "subtype": "dmxmap"
+    },
+    {
+      "python_class": "engineoutDAT",
+      "family": "DAT",
+      "subtype": "engineout"
+    },
+    {
+      "python_class": "errorDAT",
+      "family": "DAT",
+      "subtype": "error"
+    },
+    {
+      "python_class": "etherdreamDAT",
+      "family": "DAT",
+      "subtype": "etherdream"
+    },
+    {
+      "python_class": "evaluateDAT",
+      "family": "DAT",
+      "subtype": "evaluate"
+    },
+    {
+      "python_class": "examineDAT",
+      "family": "DAT",
+      "subtype": "examine"
+    },
+    {
+      "python_class": "executeDAT",
+      "family": "DAT",
+      "subtype": "execute"
+    },
+    {
+      "python_class": "fifoDAT",
+      "family": "DAT",
+      "subtype": "fifo"
+    },
+    {
+      "python_class": "fileinDAT",
+      "family": "DAT",
+      "subtype": "filein"
+    },
+    {
+      "python_class": "fileoutDAT",
+      "family": "DAT",
+      "subtype": "fileout"
+    },
+    {
+      "python_class": "folderDAT",
+      "family": "DAT",
+      "subtype": "folder"
+    },
+    {
+      "python_class": "importDAT",
+      "family": "DAT",
+      "subtype": "import"
+    },
+    {
+      "python_class": "inDAT",
+      "family": "DAT",
+      "subtype": "in"
+    },
+    {
+      "python_class": "indicesDAT",
+      "family": "DAT",
+      "subtype": "indices"
+    },
+    {
+      "python_class": "infoDAT",
+      "family": "DAT",
+      "subtype": "info"
+    },
+    {
+      "python_class": "insertDAT",
+      "family": "DAT",
+      "subtype": "insert"
+    },
+    {
+      "python_class": "jsonDAT",
+      "family": "DAT",
+      "subtype": "json"
+    },
+    {
+      "python_class": "keyboardinDAT",
+      "family": "DAT",
+      "subtype": "keyboardin"
+    },
+    {
+      "python_class": "lookupDAT",
+      "family": "DAT",
+      "subtype": "lookup"
+    },
+    {
+      "python_class": "mediafileinfoDAT",
+      "family": "DAT",
+      "subtype": "mediafileinfo"
+    },
+    {
+      "python_class": "mergeDAT",
+      "family": "DAT",
+      "subtype": "merge"
+    },
+    {
+      "python_class": "midieventDAT",
+      "family": "DAT",
+      "subtype": "midievent"
+    },
+    {
+      "python_class": "midiinDAT",
+      "family": "DAT",
+      "subtype": "midiin"
+    },
+    {
+      "python_class": "monitorsDAT",
+      "family": "DAT",
+      "subtype": "monitors"
+    },
+    {
+      "python_class": "mpcdiDAT",
+      "family": "DAT",
+      "subtype": "mpcdi"
+    },
+    {
+      "python_class": "mqttclientDAT",
+      "family": "DAT",
+      "subtype": "mqttclient"
+    },
+    {
+      "python_class": "multitouchinDAT",
+      "family": "DAT",
+      "subtype": "multitouchin"
+    },
+    {
+      "python_class": "ndiDAT",
+      "family": "DAT",
+      "subtype": "ndi"
+    },
+    {
+      "python_class": "nullDAT",
+      "family": "DAT",
+      "subtype": "null"
+    },
+    {
+      "python_class": "opexecuteDAT",
+      "family": "DAT",
+      "subtype": "opexecute"
+    },
+    {
+      "python_class": "opfindDAT",
+      "family": "DAT",
+      "subtype": "opfind"
+    },
+    {
+      "python_class": "oscinDAT",
+      "family": "DAT",
+      "subtype": "oscin"
+    },
+    {
+      "python_class": "oscoutDAT",
+      "family": "DAT",
+      "subtype": "oscout"
+    },
+    {
+      "python_class": "outDAT",
+      "family": "DAT",
+      "subtype": "out"
+    },
+    {
+      "python_class": "panelexecuteDAT",
+      "family": "DAT",
+      "subtype": "panelexecute"
+    },
+    {
+      "python_class": "parameterDAT",
+      "family": "DAT",
+      "subtype": "parameter"
+    },
+    {
+      "python_class": "parameterexecuteDAT",
+      "family": "DAT",
+      "subtype": "parameterexecute"
+    },
+    {
+      "python_class": "pargroupexecuteDAT",
+      "family": "DAT",
+      "subtype": "pargroupexecute"
+    },
+    {
+      "python_class": "performDAT",
+      "family": "DAT",
+      "subtype": "perform"
+    },
+    {
+      "python_class": "poptoDAT",
+      "family": "DAT",
+      "subtype": "popto"
+    },
+    {
+      "python_class": "renderpickDAT",
+      "family": "DAT",
+      "subtype": "renderpick"
+    },
+    {
+      "python_class": "reorderDAT",
+      "family": "DAT",
+      "subtype": "reorder"
+    },
+    {
+      "python_class": "scriptDAT",
+      "family": "DAT",
+      "subtype": "script"
+    },
+    {
+      "python_class": "selectDAT",
+      "family": "DAT",
+      "subtype": "select"
+    },
+    {
+      "python_class": "serialDAT",
+      "family": "DAT",
+      "subtype": "serial"
+    },
+    {
+      "python_class": "serialdevicesDAT",
+      "family": "DAT",
+      "subtype": "serialdevices"
+    },
+    {
+      "python_class": "socketioDAT",
+      "family": "DAT",
+      "subtype": "socketio"
+    },
+    {
+      "python_class": "soptoDAT",
+      "family": "DAT",
+      "subtype": "sopto"
+    },
+    {
+      "python_class": "sortDAT",
+      "family": "DAT",
+      "subtype": "sort"
+    },
+    {
+      "python_class": "substituteDAT",
+      "family": "DAT",
+      "subtype": "substitute"
+    },
+    {
+      "python_class": "switchDAT",
+      "family": "DAT",
+      "subtype": "switch"
+    },
+    {
+      "python_class": "tableDAT",
+      "family": "DAT",
+      "subtype": "table"
+    },
+    {
+      "python_class": "tcpipDAT",
+      "family": "DAT",
+      "subtype": "tcpip"
+    },
+    {
+      "python_class": "textDAT",
+      "family": "DAT",
+      "subtype": "text"
+    },
+    {
+      "python_class": "touchinDAT",
+      "family": "DAT",
+      "subtype": "touchin"
+    },
+    {
+      "python_class": "touchoutDAT",
+      "family": "DAT",
+      "subtype": "touchout"
+    },
+    {
+      "python_class": "transposeDAT",
+      "family": "DAT",
+      "subtype": "transpose"
+    },
+    {
+      "python_class": "tuioinDAT",
+      "family": "DAT",
+      "subtype": "tuioin"
+    },
+    {
+      "python_class": "udpinDAT",
+      "family": "DAT",
+      "subtype": "udpin"
+    },
+    {
+      "python_class": "udpoutDAT",
+      "family": "DAT",
+      "subtype": "udpout"
+    },
+    {
+      "python_class": "videodevicesDAT",
+      "family": "DAT",
+      "subtype": "videodevices"
+    },
+    {
+      "python_class": "webDAT",
+      "family": "DAT",
+      "subtype": "web"
+    },
+    {
+      "python_class": "webclientDAT",
+      "family": "DAT",
+      "subtype": "webclient"
+    },
+    {
+      "python_class": "webrtcDAT",
+      "family": "DAT",
+      "subtype": "webrtc"
+    },
+    {
+      "python_class": "webserverDAT",
+      "family": "DAT",
+      "subtype": "webserver"
+    },
+    {
+      "python_class": "websocketDAT",
+      "family": "DAT",
+      "subtype": "websocket"
+    },
+    {
+      "python_class": "xmlDAT",
+      "family": "DAT",
+      "subtype": "xml"
+    },
+    {
+      "python_class": "constantMAT",
+      "family": "MAT",
+      "subtype": "constant"
+    },
+    {
+      "python_class": "depthMAT",
+      "family": "MAT",
+      "subtype": "depth"
+    },
+    {
+      "python_class": "glslMAT",
+      "family": "MAT",
+      "subtype": "glsl"
+    },
+    {
+      "python_class": "inMAT",
+      "family": "MAT",
+      "subtype": "in"
+    },
+    {
+      "python_class": "lineMAT",
+      "family": "MAT",
+      "subtype": "line"
+    },
+    {
+      "python_class": "nullMAT",
+      "family": "MAT",
+      "subtype": "null"
+    },
+    {
+      "python_class": "outMAT",
+      "family": "MAT",
+      "subtype": "out"
+    },
+    {
+      "python_class": "pbrMAT",
+      "family": "MAT",
+      "subtype": "pbr"
+    },
+    {
+      "python_class": "phongMAT",
+      "family": "MAT",
+      "subtype": "phong"
+    },
+    {
+      "python_class": "pointMAT",
+      "family": "MAT",
+      "subtype": "point"
+    },
+    {
+      "python_class": "pointspriteMAT",
+      "family": "MAT",
+      "subtype": "pointsprite"
+    },
+    {
+      "python_class": "selectMAT",
+      "family": "MAT",
+      "subtype": "select"
+    },
+    {
+      "python_class": "sharedmeminMAT",
+      "family": "MAT",
+      "subtype": "sharedmemin"
+    },
+    {
+      "python_class": "sharedmemoutMAT",
+      "family": "MAT",
+      "subtype": "sharedmemout"
+    },
+    {
+      "python_class": "switchMAT",
+      "family": "MAT",
+      "subtype": "switch"
+    },
+    {
+      "python_class": "touchinMAT",
+      "family": "MAT",
+      "subtype": "touchin"
+    },
+    {
+      "python_class": "touchoutMAT",
+      "family": "MAT",
+      "subtype": "touchout"
+    },
+    {
+      "python_class": "wireframeMAT",
+      "family": "MAT",
+      "subtype": "wireframe"
+    },
+    {
+      "python_class": "accumulatePOP",
+      "family": "POP",
+      "subtype": "accumulate"
+    },
+    {
+      "python_class": "alembicinPOP",
+      "family": "POP",
+      "subtype": "alembicin"
+    },
+    {
+      "python_class": "alembicoutPOP",
+      "family": "POP",
+      "subtype": "alembicout"
+    },
+    {
+      "python_class": "analyzePOP",
+      "family": "POP",
+      "subtype": "analyze"
+    },
+    {
+      "python_class": "attributePOP",
+      "family": "POP",
+      "subtype": "attribute"
+    },
+    {
+      "python_class": "attributecombinePOP",
+      "family": "POP",
+      "subtype": "attributecombine"
+    },
+    {
+      "python_class": "attributeconvertPOP",
+      "family": "POP",
+      "subtype": "attributeconvert"
+    },
+    {
+      "python_class": "blendPOP",
+      "family": "POP",
+      "subtype": "blend"
+    },
+    {
+      "python_class": "boxPOP",
+      "family": "POP",
+      "subtype": "box"
+    },
+    {
+      "python_class": "cachePOP",
+      "family": "POP",
+      "subtype": "cache"
+    },
+    {
+      "python_class": "cacheblendPOP",
+      "family": "POP",
+      "subtype": "cacheblend"
+    },
+    {
+      "python_class": "cacheselectPOP",
+      "family": "POP",
+      "subtype": "cacheselect"
+    },
+    {
+      "python_class": "choptoPOP",
+      "family": "POP",
+      "subtype": "chopto"
+    },
+    {
+      "python_class": "circlePOP",
+      "family": "POP",
+      "subtype": "circle"
+    },
+    {
+      "python_class": "connectivityPOP",
+      "family": "POP",
+      "subtype": "connectivity"
+    },
+    {
+      "python_class": "convertPOP",
+      "family": "POP",
+      "subtype": "convert"
+    },
+    {
+      "python_class": "copyPOP",
+      "family": "POP",
+      "subtype": "copy"
+    },
+    {
+      "python_class": "cplusplusPOP",
+      "family": "POP",
+      "subtype": "cplusplus"
+    },
+    {
+      "python_class": "curvePOP",
+      "family": "POP",
+      "subtype": "curve"
+    },
+    {
+      "python_class": "dattoPOP",
+      "family": "POP",
+      "subtype": "datto"
+    },
+    {
+      "python_class": "deletePOP",
+      "family": "POP",
+      "subtype": "delete"
+    },
+    {
+      "python_class": "dimensionPOP",
+      "family": "POP",
+      "subtype": "dimension"
+    },
+    {
+      "python_class": "dmxfixturePOP",
+      "family": "POP",
+      "subtype": "dmxfixture"
+    },
+    {
+      "python_class": "dmxoutPOP",
+      "family": "POP",
+      "subtype": "dmxout"
+    },
+    {
+      "python_class": "engineoutPOP",
+      "family": "POP",
+      "subtype": "engineout"
+    },
+    {
+      "python_class": "extrudePOP",
+      "family": "POP",
+      "subtype": "extrude"
+    },
+    {
+      "python_class": "facetPOP",
+      "family": "POP",
+      "subtype": "facet"
+    },
+    {
+      "python_class": "feedbackPOP",
+      "family": "POP",
+      "subtype": "feedback"
+    },
+    {
+      "python_class": "fieldPOP",
+      "family": "POP",
+      "subtype": "field"
+    },
+    {
+      "python_class": "fileinPOP",
+      "family": "POP",
+      "subtype": "filein"
+    },
+    {
+      "python_class": "fileoutPOP",
+      "family": "POP",
+      "subtype": "fileout"
+    },
+    {
+      "python_class": "forceradialPOP",
+      "family": "POP",
+      "subtype": "forceradial"
+    },
+    {
+      "python_class": "glslPOP",
+      "family": "POP",
+      "subtype": "glsl"
+    },
+    {
+      "python_class": "glsladvancedPOP",
+      "family": "POP",
+      "subtype": "glsladvanced"
+    },
+    {
+      "python_class": "glslcopyPOP",
+      "family": "POP",
+      "subtype": "glslcopy"
+    },
+    {
+      "python_class": "glslselectPOP",
+      "family": "POP",
+      "subtype": "glslselect"
+    },
+    {
+      "python_class": "gridPOP",
+      "family": "POP",
+      "subtype": "grid"
+    },
+    {
+      "python_class": "groupPOP",
+      "family": "POP",
+      "subtype": "group"
+    },
+    {
+      "python_class": "histogramPOP",
+      "family": "POP",
+      "subtype": "histogram"
+    },
+    {
+      "python_class": "importselectPOP",
+      "family": "POP",
+      "subtype": "importselect"
+    },
+    {
+      "python_class": "inPOP",
+      "family": "POP",
+      "subtype": "in"
+    },
+    {
+      "python_class": "limitPOP",
+      "family": "POP",
+      "subtype": "limit"
+    },
+    {
+      "python_class": "linePOP",
+      "family": "POP",
+      "subtype": "line"
+    },
+    {
+      "python_class": "linebreakPOP",
+      "family": "POP",
+      "subtype": "linebreak"
+    },
+    {
+      "python_class": "linedividePOP",
+      "family": "POP",
+      "subtype": "linedivide"
+    },
+    {
+      "python_class": "linemetricsPOP",
+      "family": "POP",
+      "subtype": "linemetrics"
+    },
+    {
+      "python_class": "lineresamplePOP",
+      "family": "POP",
+      "subtype": "lineresample"
+    },
+    {
+      "python_class": "linesmoothPOP",
+      "family": "POP",
+      "subtype": "linesmooth"
+    },
+    {
+      "python_class": "lookupattributePOP",
+      "family": "POP",
+      "subtype": "lookupattribute"
+    },
+    {
+      "python_class": "lookupchannelPOP",
+      "family": "POP",
+      "subtype": "lookupchannel"
+    },
+    {
+      "python_class": "lookuptexturePOP",
+      "family": "POP",
+      "subtype": "lookuptexture"
+    },
+    {
+      "python_class": "mathPOP",
+      "family": "POP",
+      "subtype": "math"
+    },
+    {
+      "python_class": "mathcombinePOP",
+      "family": "POP",
+      "subtype": "mathcombine"
+    },
+    {
+      "python_class": "mathmixPOP",
+      "family": "POP",
+      "subtype": "mathmix"
+    },
+    {
+      "python_class": "mergePOP",
+      "family": "POP",
+      "subtype": "merge"
+    },
+    {
+      "python_class": "neighborPOP",
+      "family": "POP",
+      "subtype": "neighbor"
+    },
+    {
+      "python_class": "noisePOP",
+      "family": "POP",
+      "subtype": "noise"
+    },
+    {
+      "python_class": "normalPOP",
+      "family": "POP",
+      "subtype": "normal"
+    },
+    {
+      "python_class": "normalizePOP",
+      "family": "POP",
+      "subtype": "normalize"
+    },
+    {
+      "python_class": "nullPOP",
+      "family": "POP",
+      "subtype": "null"
+    },
+    {
+      "python_class": "oakselectPOP",
+      "family": "POP",
+      "subtype": "oakselect"
+    },
+    {
+      "python_class": "outPOP",
+      "family": "POP",
+      "subtype": "out"
+    },
+    {
+      "python_class": "particlePOP",
+      "family": "POP",
+      "subtype": "particle"
+    },
+    {
+      "python_class": "patternPOP",
+      "family": "POP",
+      "subtype": "pattern"
+    },
+    {
+      "python_class": "phaserPOP",
+      "family": "POP",
+      "subtype": "phaser"
+    },
+    {
+      "python_class": "planePOP",
+      "family": "POP",
+      "subtype": "plane"
+    },
+    {
+      "python_class": "pointPOP",
+      "family": "POP",
+      "subtype": "point"
+    },
+    {
+      "python_class": "pointfileinPOP",
+      "family": "POP",
+      "subtype": "pointfilein"
+    },
+    {
+      "python_class": "pointgeneratorPOP",
+      "family": "POP",
+      "subtype": "pointgenerator"
+    },
+    {
+      "python_class": "polygonizePOP",
+      "family": "POP",
+      "subtype": "polygonize"
+    },
+    {
+      "python_class": "primitivePOP",
+      "family": "POP",
+      "subtype": "primitive"
+    },
+    {
+      "python_class": "projectionPOP",
+      "family": "POP",
+      "subtype": "projection"
+    },
+    {
+      "python_class": "proximityPOP",
+      "family": "POP",
+      "subtype": "proximity"
+    },
+    {
+      "python_class": "quantizePOP",
+      "family": "POP",
+      "subtype": "quantize"
+    },
+    {
+      "python_class": "randomPOP",
+      "family": "POP",
+      "subtype": "random"
+    },
+    {
+      "python_class": "rayPOP",
+      "family": "POP",
+      "subtype": "ray"
+    },
+    {
+      "python_class": "rectanglePOP",
+      "family": "POP",
+      "subtype": "rectangle"
+    },
+    {
+      "python_class": "rerangePOP",
+      "family": "POP",
+      "subtype": "rerange"
+    },
+    {
+      "python_class": "revolvePOP",
+      "family": "POP",
+      "subtype": "revolve"
+    },
+    {
+      "python_class": "selectPOP",
+      "family": "POP",
+      "subtype": "select"
+    },
+    {
+      "python_class": "skinPOP",
+      "family": "POP",
+      "subtype": "skin"
+    },
+    {
+      "python_class": "skindeformPOP",
+      "family": "POP",
+      "subtype": "skindeform"
+    },
+    {
+      "python_class": "soptoPOP",
+      "family": "POP",
+      "subtype": "sopto"
+    },
+    {
+      "python_class": "sortPOP",
+      "family": "POP",
+      "subtype": "sort"
+    },
+    {
+      "python_class": "spherePOP",
+      "family": "POP",
+      "subtype": "sphere"
+    },
+    {
+      "python_class": "sprinklePOP",
+      "family": "POP",
+      "subtype": "sprinkle"
+    },
+    {
+      "python_class": "subdividePOP",
+      "family": "POP",
+      "subtype": "subdivide"
+    },
+    {
+      "python_class": "switchPOP",
+      "family": "POP",
+      "subtype": "switch"
+    },
+    {
+      "python_class": "textPOP",
+      "family": "POP",
+      "subtype": "text"
+    },
+    {
+      "python_class": "texturemapPOP",
+      "family": "POP",
+      "subtype": "texturemap"
+    },
+    {
+      "python_class": "topologyPOP",
+      "family": "POP",
+      "subtype": "topology"
+    },
+    {
+      "python_class": "toptoPOP",
+      "family": "POP",
+      "subtype": "topto"
+    },
+    {
+      "python_class": "torusPOP",
+      "family": "POP",
+      "subtype": "torus"
+    },
+    {
+      "python_class": "tracePOP",
+      "family": "POP",
+      "subtype": "trace"
+    },
+    {
+      "python_class": "trailPOP",
+      "family": "POP",
+      "subtype": "trail"
+    },
+    {
+      "python_class": "transformPOP",
+      "family": "POP",
+      "subtype": "transform"
+    },
+    {
+      "python_class": "triangulatePOP",
+      "family": "POP",
+      "subtype": "triangulate"
+    },
+    {
+      "python_class": "trigPOP",
+      "family": "POP",
+      "subtype": "trig"
+    },
+    {
+      "python_class": "tubePOP",
+      "family": "POP",
+      "subtype": "tube"
+    },
+    {
+      "python_class": "twistPOP",
+      "family": "POP",
+      "subtype": "twist"
+    },
+    {
+      "python_class": "zedPOP",
+      "family": "POP",
+      "subtype": "zed"
+    },
+    {
+      "python_class": "addSOP",
+      "family": "SOP",
+      "subtype": "add"
+    },
+    {
+      "python_class": "alembicSOP",
+      "family": "SOP",
+      "subtype": "alembic"
+    },
+    {
+      "python_class": "alignSOP",
+      "family": "SOP",
+      "subtype": "align"
+    },
+    {
+      "python_class": "armSOP",
+      "family": "SOP",
+      "subtype": "arm"
+    },
+    {
+      "python_class": "attributeSOP",
+      "family": "SOP",
+      "subtype": "attribute"
+    },
+    {
+      "python_class": "attributecreateSOP",
+      "family": "SOP",
+      "subtype": "attributecreate"
+    },
+    {
+      "python_class": "basisSOP",
+      "family": "SOP",
+      "subtype": "basis"
+    },
+    {
+      "python_class": "blendSOP",
+      "family": "SOP",
+      "subtype": "blend"
+    },
+    {
+      "python_class": "bonegroupSOP",
+      "family": "SOP",
+      "subtype": "bonegroup"
+    },
+    {
+      "python_class": "booleanSOP",
+      "family": "SOP",
+      "subtype": "boolean"
+    },
+    {
+      "python_class": "boxSOP",
+      "family": "SOP",
+      "subtype": "box"
+    },
+    {
+      "python_class": "bridgeSOP",
+      "family": "SOP",
+      "subtype": "bridge"
+    },
+    {
+      "python_class": "cacheSOP",
+      "family": "SOP",
+      "subtype": "cache"
+    },
+    {
+      "python_class": "capSOP",
+      "family": "SOP",
+      "subtype": "cap"
+    },
+    {
+      "python_class": "captureSOP",
+      "family": "SOP",
+      "subtype": "capture"
+    },
+    {
+      "python_class": "captureregionSOP",
+      "family": "SOP",
+      "subtype": "captureregion"
+    },
+    {
+      "python_class": "carveSOP",
+      "family": "SOP",
+      "subtype": "carve"
+    },
+    {
+      "python_class": "choptoSOP",
+      "family": "SOP",
+      "subtype": "chopto"
+    },
+    {
+      "python_class": "circleSOP",
+      "family": "SOP",
+      "subtype": "circle"
+    },
+    {
+      "python_class": "claySOP",
+      "family": "SOP",
+      "subtype": "clay"
+    },
+    {
+      "python_class": "clipSOP",
+      "family": "SOP",
+      "subtype": "clip"
+    },
+    {
+      "python_class": "convertSOP",
+      "family": "SOP",
+      "subtype": "convert"
+    },
+    {
+      "python_class": "copySOP",
+      "family": "SOP",
+      "subtype": "copy"
+    },
+    {
+      "python_class": "cplusplusSOP",
+      "family": "SOP",
+      "subtype": "cplusplus"
+    },
+    {
+      "python_class": "creepSOP",
+      "family": "SOP",
+      "subtype": "creep"
+    },
+    {
+      "python_class": "curveclaySOP",
+      "family": "SOP",
+      "subtype": "curveclay"
+    },
+    {
+      "python_class": "curvesectSOP",
+      "family": "SOP",
+      "subtype": "curvesect"
+    },
+    {
+      "python_class": "dattoSOP",
+      "family": "SOP",
+      "subtype": "datto"
+    },
+    {
+      "python_class": "deformSOP",
+      "family": "SOP",
+      "subtype": "deform"
+    },
+    {
+      "python_class": "deleteSOP",
+      "family": "SOP",
+      "subtype": "delete"
+    },
+    {
+      "python_class": "divideSOP",
+      "family": "SOP",
+      "subtype": "divide"
+    },
+    {
+      "python_class": "extrudeSOP",
+      "family": "SOP",
+      "subtype": "extrude"
+    },
+    {
+      "python_class": "facetSOP",
+      "family": "SOP",
+      "subtype": "facet"
+    },
+    {
+      "python_class": "facetrackSOP",
+      "family": "SOP",
+      "subtype": "facetrack"
+    },
+    {
+      "python_class": "fileinSOP",
+      "family": "SOP",
+      "subtype": "filein"
+    },
+    {
+      "python_class": "filletSOP",
+      "family": "SOP",
+      "subtype": "fillet"
+    },
+    {
+      "python_class": "fitSOP",
+      "family": "SOP",
+      "subtype": "fit"
+    },
+    {
+      "python_class": "fontSOP",
+      "family": "SOP",
+      "subtype": "font"
+    },
+    {
+      "python_class": "forceSOP",
+      "family": "SOP",
+      "subtype": "force"
+    },
+    {
+      "python_class": "fractalSOP",
+      "family": "SOP",
+      "subtype": "fractal"
+    },
+    {
+      "python_class": "gridSOP",
+      "family": "SOP",
+      "subtype": "grid"
+    },
+    {
+      "python_class": "groupSOP",
+      "family": "SOP",
+      "subtype": "group"
+    },
+    {
+      "python_class": "holeSOP",
+      "family": "SOP",
+      "subtype": "hole"
+    },
+    {
+      "python_class": "importselectSOP",
+      "family": "SOP",
+      "subtype": "importselect"
+    },
+    {
+      "python_class": "inSOP",
+      "family": "SOP",
+      "subtype": "in"
+    },
+    {
+      "python_class": "inversecurveSOP",
+      "family": "SOP",
+      "subtype": "inversecurve"
+    },
+    {
+      "python_class": "isosurfaceSOP",
+      "family": "SOP",
+      "subtype": "isosurface"
+    },
+    {
+      "python_class": "joinSOP",
+      "family": "SOP",
+      "subtype": "join"
+    },
+    {
+      "python_class": "jointSOP",
+      "family": "SOP",
+      "subtype": "joint"
+    },
+    {
+      "python_class": "kinectSOP",
+      "family": "SOP",
+      "subtype": "kinect"
+    },
+    {
+      "python_class": "latticeSOP",
+      "family": "SOP",
+      "subtype": "lattice"
+    },
+    {
+      "python_class": "limitSOP",
+      "family": "SOP",
+      "subtype": "limit"
+    },
+    {
+      "python_class": "lineSOP",
+      "family": "SOP",
+      "subtype": "line"
+    },
+    {
+      "python_class": "linethickSOP",
+      "family": "SOP",
+      "subtype": "linethick"
+    },
+    {
+      "python_class": "lodSOP",
+      "family": "SOP",
+      "subtype": "lod"
+    },
+    {
+      "python_class": "lsystemSOP",
+      "family": "SOP",
+      "subtype": "lsystem"
+    },
+    {
+      "python_class": "magnetSOP",
+      "family": "SOP",
+      "subtype": "magnet"
+    },
+    {
+      "python_class": "materialSOP",
+      "family": "SOP",
+      "subtype": "material"
+    },
+    {
+      "python_class": "mergeSOP",
+      "family": "SOP",
+      "subtype": "merge"
+    },
+    {
+      "python_class": "metaballSOP",
+      "family": "SOP",
+      "subtype": "metaball"
+    },
+    {
+      "python_class": "modelSOP",
+      "family": "SOP",
+      "subtype": "model"
+    },
+    {
+      "python_class": "noiseSOP",
+      "family": "SOP",
+      "subtype": "noise"
+    },
+    {
+      "python_class": "nullSOP",
+      "family": "SOP",
+      "subtype": "null"
+    },
+    {
+      "python_class": "objectmergeSOP",
+      "family": "SOP",
+      "subtype": "objectmerge"
+    },
+    {
+      "python_class": "oculusriftSOP",
+      "family": "SOP",
+      "subtype": "oculusrift"
+    },
+    {
+      "python_class": "openvrSOP",
+      "family": "SOP",
+      "subtype": "openvr"
+    },
+    {
+      "python_class": "outSOP",
+      "family": "SOP",
+      "subtype": "out"
+    },
+    {
+      "python_class": "particleSOP",
+      "family": "SOP",
+      "subtype": "particle"
+    },
+    {
+      "python_class": "pointSOP",
+      "family": "SOP",
+      "subtype": "point"
+    },
+    {
+      "python_class": "polyloftSOP",
+      "family": "SOP",
+      "subtype": "polyloft"
+    },
+    {
+      "python_class": "polypatchSOP",
+      "family": "SOP",
+      "subtype": "polypatch"
+    },
+    {
+      "python_class": "polyreduceSOP",
+      "family": "SOP",
+      "subtype": "polyreduce"
+    },
+    {
+      "python_class": "polysplineSOP",
+      "family": "SOP",
+      "subtype": "polyspline"
+    },
+    {
+      "python_class": "polystitchSOP",
+      "family": "SOP",
+      "subtype": "polystitch"
+    },
+    {
+      "python_class": "poptoSOP",
+      "family": "SOP",
+      "subtype": "popto"
+    },
+    {
+      "python_class": "primitiveSOP",
+      "family": "SOP",
+      "subtype": "primitive"
+    },
+    {
+      "python_class": "profileSOP",
+      "family": "SOP",
+      "subtype": "profile"
+    },
+    {
+      "python_class": "projectSOP",
+      "family": "SOP",
+      "subtype": "project"
+    },
+    {
+      "python_class": "railsSOP",
+      "family": "SOP",
+      "subtype": "rails"
+    },
+    {
+      "python_class": "rasterSOP",
+      "family": "SOP",
+      "subtype": "raster"
+    },
+    {
+      "python_class": "raySOP",
+      "family": "SOP",
+      "subtype": "ray"
+    },
+    {
+      "python_class": "rectangleSOP",
+      "family": "SOP",
+      "subtype": "rectangle"
+    },
+    {
+      "python_class": "refineSOP",
+      "family": "SOP",
+      "subtype": "refine"
+    },
+    {
+      "python_class": "resampleSOP",
+      "family": "SOP",
+      "subtype": "resample"
+    },
+    {
+      "python_class": "revolveSOP",
+      "family": "SOP",
+      "subtype": "revolve"
+    },
+    {
+      "python_class": "scriptSOP",
+      "family": "SOP",
+      "subtype": "script"
+    },
+    {
+      "python_class": "selectSOP",
+      "family": "SOP",
+      "subtype": "select"
+    },
+    {
+      "python_class": "sequenceblendSOP",
+      "family": "SOP",
+      "subtype": "sequenceblend"
+    },
+    {
+      "python_class": "shaderSOP",
+      "family": "SOP",
+      "subtype": "shader"
+    },
+    {
+      "python_class": "skinSOP",
+      "family": "SOP",
+      "subtype": "skin"
+    },
+    {
+      "python_class": "sortSOP",
+      "family": "SOP",
+      "subtype": "sort"
+    },
+    {
+      "python_class": "sphereSOP",
+      "family": "SOP",
+      "subtype": "sphere"
+    },
+    {
+      "python_class": "springSOP",
+      "family": "SOP",
+      "subtype": "spring"
+    },
+    {
+      "python_class": "sprinkleSOP",
+      "family": "SOP",
+      "subtype": "sprinkle"
+    },
+    {
+      "python_class": "spriteSOP",
+      "family": "SOP",
+      "subtype": "sprite"
+    },
+    {
+      "python_class": "stitchSOP",
+      "family": "SOP",
+      "subtype": "stitch"
+    },
+    {
+      "python_class": "subdivideSOP",
+      "family": "SOP",
+      "subtype": "subdivide"
+    },
+    {
+      "python_class": "superquadSOP",
+      "family": "SOP",
+      "subtype": "superquad"
+    },
+    {
+      "python_class": "surfsectSOP",
+      "family": "SOP",
+      "subtype": "surfsect"
+    },
+    {
+      "python_class": "sweepSOP",
+      "family": "SOP",
+      "subtype": "sweep"
+    },
+    {
+      "python_class": "switchSOP",
+      "family": "SOP",
+      "subtype": "switch"
+    },
+    {
+      "python_class": "textSOP",
+      "family": "SOP",
+      "subtype": "text"
+    },
+    {
+      "python_class": "textureSOP",
+      "family": "SOP",
+      "subtype": "texture"
+    },
+    {
+      "python_class": "torusSOP",
+      "family": "SOP",
+      "subtype": "torus"
+    },
+    {
+      "python_class": "traceSOP",
+      "family": "SOP",
+      "subtype": "trace"
+    },
+    {
+      "python_class": "trailSOP",
+      "family": "SOP",
+      "subtype": "trail"
+    },
+    {
+      "python_class": "transformSOP",
+      "family": "SOP",
+      "subtype": "transform"
+    },
+    {
+      "python_class": "trimSOP",
+      "family": "SOP",
+      "subtype": "trim"
+    },
+    {
+      "python_class": "tristripSOP",
+      "family": "SOP",
+      "subtype": "tristrip"
+    },
+    {
+      "python_class": "tubeSOP",
+      "family": "SOP",
+      "subtype": "tube"
+    },
+    {
+      "python_class": "twistSOP",
+      "family": "SOP",
+      "subtype": "twist"
+    },
+    {
+      "python_class": "vertexSOP",
+      "family": "SOP",
+      "subtype": "vertex"
+    },
+    {
+      "python_class": "wireframeSOP",
+      "family": "SOP",
+      "subtype": "wireframe"
+    },
+    {
+      "python_class": "xdeformSOP",
+      "family": "SOP",
+      "subtype": "xdeform"
+    },
+    {
+      "python_class": "zedSOP",
+      "family": "SOP",
+      "subtype": "zed"
+    },
+    {
+      "python_class": "addTOP",
+      "family": "TOP",
+      "subtype": "add"
+    },
+    {
+      "python_class": "analyzeTOP",
+      "family": "TOP",
+      "subtype": "analyze"
+    },
+    {
+      "python_class": "antialiasTOP",
+      "family": "TOP",
+      "subtype": "antialias"
+    },
+    {
+      "python_class": "blobtrackTOP",
+      "family": "TOP",
+      "subtype": "blobtrack"
+    },
+    {
+      "python_class": "bloomTOP",
+      "family": "TOP",
+      "subtype": "bloom"
+    },
+    {
+      "python_class": "blurTOP",
+      "family": "TOP",
+      "subtype": "blur"
+    },
+    {
+      "python_class": "cacheTOP",
+      "family": "TOP",
+      "subtype": "cache"
+    },
+    {
+      "python_class": "cacheselectTOP",
+      "family": "TOP",
+      "subtype": "cacheselect"
+    },
+    {
+      "python_class": "channelmixTOP",
+      "family": "TOP",
+      "subtype": "channelmix"
+    },
+    {
+      "python_class": "choptoTOP",
+      "family": "TOP",
+      "subtype": "chopto"
+    },
+    {
+      "python_class": "chromakeyTOP",
+      "family": "TOP",
+      "subtype": "chromakey"
+    },
+    {
+      "python_class": "circleTOP",
+      "family": "TOP",
+      "subtype": "circle"
+    },
+    {
+      "python_class": "compositeTOP",
+      "family": "TOP",
+      "subtype": "composite"
+    },
+    {
+      "python_class": "constantTOP",
+      "family": "TOP",
+      "subtype": "constant"
+    },
+    {
+      "python_class": "convolveTOP",
+      "family": "TOP",
+      "subtype": "convolve"
+    },
+    {
+      "python_class": "cornerpinTOP",
+      "family": "TOP",
+      "subtype": "cornerpin"
+    },
+    {
+      "python_class": "cplusplusTOP",
+      "family": "TOP",
+      "subtype": "cplusplus"
+    },
+    {
+      "python_class": "cropTOP",
+      "family": "TOP",
+      "subtype": "crop"
+    },
+    {
+      "python_class": "crossTOP",
+      "family": "TOP",
+      "subtype": "cross"
+    },
+    {
+      "python_class": "cubemapTOP",
+      "family": "TOP",
+      "subtype": "cubemap"
+    },
+    {
+      "python_class": "depthTOP",
+      "family": "TOP",
+      "subtype": "depth"
+    },
+    {
+      "python_class": "differenceTOP",
+      "family": "TOP",
+      "subtype": "difference"
+    },
+    {
+      "python_class": "directdisplayoutTOP",
+      "family": "TOP",
+      "subtype": "directdisplayout"
+    },
+    {
+      "python_class": "directxinTOP",
+      "family": "TOP",
+      "subtype": "directxin"
+    },
+    {
+      "python_class": "directxoutTOP",
+      "family": "TOP",
+      "subtype": "directxout"
+    },
+    {
+      "python_class": "displaceTOP",
+      "family": "TOP",
+      "subtype": "displace"
+    },
+    {
+      "python_class": "edgeTOP",
+      "family": "TOP",
+      "subtype": "edge"
+    },
+    {
+      "python_class": "embossTOP",
+      "family": "TOP",
+      "subtype": "emboss"
+    },
+    {
+      "python_class": "engineoutTOP",
+      "family": "TOP",
+      "subtype": "engineout"
+    },
+    {
+      "python_class": "feedbackTOP",
+      "family": "TOP",
+      "subtype": "feedback"
+    },
+    {
+      "python_class": "fitTOP",
+      "family": "TOP",
+      "subtype": "fit"
+    },
+    {
+      "python_class": "flipTOP",
+      "family": "TOP",
+      "subtype": "flip"
+    },
+    {
+      "python_class": "functionTOP",
+      "family": "TOP",
+      "subtype": "function"
+    },
+    {
+      "python_class": "glslTOP",
+      "family": "TOP",
+      "subtype": "glsl"
+    },
+    {
+      "python_class": "glslmultiTOP",
+      "family": "TOP",
+      "subtype": "glslmulti"
+    },
+    {
+      "python_class": "hsvadjustTOP",
+      "family": "TOP",
+      "subtype": "hsvadjust"
+    },
+    {
+      "python_class": "hsvtorgbTOP",
+      "family": "TOP",
+      "subtype": "hsvtorgb"
+    },
+    {
+      "python_class": "importselectTOP",
+      "family": "TOP",
+      "subtype": "importselect"
+    },
+    {
+      "python_class": "inTOP",
+      "family": "TOP",
+      "subtype": "in"
+    },
+    {
+      "python_class": "insideTOP",
+      "family": "TOP",
+      "subtype": "inside"
+    },
+    {
+      "python_class": "kinectTOP",
+      "family": "TOP",
+      "subtype": "kinect"
+    },
+    {
+      "python_class": "kinectazureTOP",
+      "family": "TOP",
+      "subtype": "kinectazure"
+    },
+    {
+      "python_class": "kinectazureselectTOP",
+      "family": "TOP",
+      "subtype": "kinectazureselect"
+    },
+    {
+      "python_class": "layermixTOP",
+      "family": "TOP",
+      "subtype": "layermix"
+    },
+    {
+      "python_class": "layoutTOP",
+      "family": "TOP",
+      "subtype": "layout"
+    },
+    {
+      "python_class": "leapmotionTOP",
+      "family": "TOP",
+      "subtype": "leapmotion"
+    },
+    {
+      "python_class": "lensdistortTOP",
+      "family": "TOP",
+      "subtype": "lensdistort"
+    },
+    {
+      "python_class": "levelTOP",
+      "family": "TOP",
+      "subtype": "level"
+    },
+    {
+      "python_class": "limitTOP",
+      "family": "TOP",
+      "subtype": "limit"
+    },
+    {
+      "python_class": "lookupTOP",
+      "family": "TOP",
+      "subtype": "lookup"
+    },
+    {
+      "python_class": "lumablurTOP",
+      "family": "TOP",
+      "subtype": "lumablur"
+    },
+    {
+      "python_class": "lumalevelTOP",
+      "family": "TOP",
+      "subtype": "lumalevel"
+    },
+    {
+      "python_class": "mathTOP",
+      "family": "TOP",
+      "subtype": "math"
+    },
+    {
+      "python_class": "matteTOP",
+      "family": "TOP",
+      "subtype": "matte"
+    },
+    {
+      "python_class": "mirrorTOP",
+      "family": "TOP",
+      "subtype": "mirror"
+    },
+    {
+      "python_class": "monochromeTOP",
+      "family": "TOP",
+      "subtype": "monochrome"
+    },
+    {
+      "python_class": "mosysTOP",
+      "family": "TOP",
+      "subtype": "mosys"
+    },
+    {
+      "python_class": "moviefileinTOP",
+      "family": "TOP",
+      "subtype": "moviefilein"
+    },
+    {
+      "python_class": "moviefileoutTOP",
+      "family": "TOP",
+      "subtype": "moviefileout"
+    },
+    {
+      "python_class": "mpcdiTOP",
+      "family": "TOP",
+      "subtype": "mpcdi"
+    },
+    {
+      "python_class": "multiplyTOP",
+      "family": "TOP",
+      "subtype": "multiply"
+    },
+    {
+      "python_class": "ncamTOP",
+      "family": "TOP",
+      "subtype": "ncam"
+    },
+    {
+      "python_class": "ndiinTOP",
+      "family": "TOP",
+      "subtype": "ndiin"
+    },
+    {
+      "python_class": "ndioutTOP",
+      "family": "TOP",
+      "subtype": "ndiout"
+    },
+    {
+      "python_class": "noiseTOP",
+      "family": "TOP",
+      "subtype": "noise"
+    },
+    {
+      "python_class": "normalmapTOP",
+      "family": "TOP",
+      "subtype": "normalmap"
+    },
+    {
+      "python_class": "notchTOP",
+      "family": "TOP",
+      "subtype": "notch"
+    },
+    {
+      "python_class": "nullTOP",
+      "family": "TOP",
+      "subtype": "null"
+    },
+    {
+      "python_class": "nvidiabackgroundTOP",
+      "family": "TOP",
+      "subtype": "nvidiabackground"
+    },
+    {
+      "python_class": "nvidiadenoiseTOP",
+      "family": "TOP",
+      "subtype": "nvidiadenoise"
+    },
+    {
+      "python_class": "nvidiaflexTOP",
+      "family": "TOP",
+      "subtype": "nvidiaflex"
+    },
+    {
+      "python_class": "nvidiaflowTOP",
+      "family": "TOP",
+      "subtype": "nvidiaflow"
+    },
+    {
+      "python_class": "nvidiartxvideoTOP",
+      "family": "TOP",
+      "subtype": "nvidiartxvideo"
+    },
+    {
+      "python_class": "nvidiaupscalerTOP",
+      "family": "TOP",
+      "subtype": "nvidiaupscaler"
+    },
+    {
+      "python_class": "oakselectTOP",
+      "family": "TOP",
+      "subtype": "oakselect"
+    },
+    {
+      "python_class": "oculusriftTOP",
+      "family": "TOP",
+      "subtype": "oculusrift"
+    },
+    {
+      "python_class": "opencolorioTOP",
+      "family": "TOP",
+      "subtype": "opencolorio"
+    },
+    {
+      "python_class": "openvrTOP",
+      "family": "TOP",
+      "subtype": "openvr"
+    },
+    {
+      "python_class": "opticalflowTOP",
+      "family": "TOP",
+      "subtype": "opticalflow"
+    },
+    {
+      "python_class": "opviewerTOP",
+      "family": "TOP",
+      "subtype": "opviewer"
+    },
+    {
+      "python_class": "orbbecTOP",
+      "family": "TOP",
+      "subtype": "orbbec"
+    },
+    {
+      "python_class": "orbbecselectTOP",
+      "family": "TOP",
+      "subtype": "orbbecselect"
+    },
+    {
+      "python_class": "ousterTOP",
+      "family": "TOP",
+      "subtype": "ouster"
+    },
+    {
+      "python_class": "ousterselectTOP",
+      "family": "TOP",
+      "subtype": "ousterselect"
+    },
+    {
+      "python_class": "outTOP",
+      "family": "TOP",
+      "subtype": "out"
+    },
+    {
+      "python_class": "outsideTOP",
+      "family": "TOP",
+      "subtype": "outside"
+    },
+    {
+      "python_class": "overTOP",
+      "family": "TOP",
+      "subtype": "over"
+    },
+    {
+      "python_class": "packTOP",
+      "family": "TOP",
+      "subtype": "pack"
+    },
+    {
+      "python_class": "photoshopinTOP",
+      "family": "TOP",
+      "subtype": "photoshopin"
+    },
+    {
+      "python_class": "pointfileinTOP",
+      "family": "TOP",
+      "subtype": "pointfilein"
+    },
+    {
+      "python_class": "pointfileselectTOP",
+      "family": "TOP",
+      "subtype": "pointfileselect"
+    },
+    {
+      "python_class": "pointtransformTOP",
+      "family": "TOP",
+      "subtype": "pointtransform"
+    },
+    {
+      "python_class": "poptoTOP",
+      "family": "TOP",
+      "subtype": "popto"
+    },
+    {
+      "python_class": "prefiltermapTOP",
+      "family": "TOP",
+      "subtype": "prefiltermap"
+    },
+    {
+      "python_class": "projectionTOP",
+      "family": "TOP",
+      "subtype": "projection"
+    },
+    {
+      "python_class": "rampTOP",
+      "family": "TOP",
+      "subtype": "ramp"
+    },
+    {
+      "python_class": "realsenseTOP",
+      "family": "TOP",
+      "subtype": "realsense"
+    },
+    {
+      "python_class": "rectangleTOP",
+      "family": "TOP",
+      "subtype": "rectangle"
+    },
+    {
+      "python_class": "remapTOP",
+      "family": "TOP",
+      "subtype": "remap"
+    },
+    {
+      "python_class": "renderTOP",
+      "family": "TOP",
+      "subtype": "render"
+    },
+    {
+      "python_class": "renderpassTOP",
+      "family": "TOP",
+      "subtype": "renderpass"
+    },
+    {
+      "python_class": "renderselectTOP",
+      "family": "TOP",
+      "subtype": "renderselect"
+    },
+    {
+      "python_class": "rendersimpleTOP",
+      "family": "TOP",
+      "subtype": "rendersimple"
+    },
+    {
+      "python_class": "renderstreaminTOP",
+      "family": "TOP",
+      "subtype": "renderstreamin"
+    },
+    {
+      "python_class": "renderstreamoutTOP",
+      "family": "TOP",
+      "subtype": "renderstreamout"
+    },
+    {
+      "python_class": "reorderTOP",
+      "family": "TOP",
+      "subtype": "reorder"
+    },
+    {
+      "python_class": "resolutionTOP",
+      "family": "TOP",
+      "subtype": "resolution"
+    },
+    {
+      "python_class": "rgbkeyTOP",
+      "family": "TOP",
+      "subtype": "rgbkey"
+    },
+    {
+      "python_class": "rgbtohsvTOP",
+      "family": "TOP",
+      "subtype": "rgbtohsv"
+    },
+    {
+      "python_class": "scalabledisplayTOP",
+      "family": "TOP",
+      "subtype": "scalabledisplay"
+    },
+    {
+      "python_class": "screenTOP",
+      "family": "TOP",
+      "subtype": "screen"
+    },
+    {
+      "python_class": "screengrabTOP",
+      "family": "TOP",
+      "subtype": "screengrab"
+    },
+    {
+      "python_class": "scriptTOP",
+      "family": "TOP",
+      "subtype": "script"
+    },
+    {
+      "python_class": "selectTOP",
+      "family": "TOP",
+      "subtype": "select"
+    },
+    {
+      "python_class": "sharedmeminTOP",
+      "family": "TOP",
+      "subtype": "sharedmemin"
+    },
+    {
+      "python_class": "sharedmemoutTOP",
+      "family": "TOP",
+      "subtype": "sharedmemout"
+    },
+    {
+      "python_class": "sickTOP",
+      "family": "TOP",
+      "subtype": "sick"
+    },
+    {
+      "python_class": "slopeTOP",
+      "family": "TOP",
+      "subtype": "slope"
+    },
+    {
+      "python_class": "spectrumTOP",
+      "family": "TOP",
+      "subtype": "spectrum"
+    },
+    {
+      "python_class": "ssaoTOP",
+      "family": "TOP",
+      "subtype": "ssao"
+    },
+    {
+      "python_class": "st2110inTOP",
+      "family": "TOP",
+      "subtype": "st2110in"
+    },
+    {
+      "python_class": "st2110outTOP",
+      "family": "TOP",
+      "subtype": "st2110out"
+    },
+    {
+      "python_class": "stypeTOP",
+      "family": "TOP",
+      "subtype": "stype"
+    },
+    {
+      "python_class": "substanceTOP",
+      "family": "TOP",
+      "subtype": "substance"
+    },
+    {
+      "python_class": "substanceselectTOP",
+      "family": "TOP",
+      "subtype": "substanceselect"
+    },
+    {
+      "python_class": "subtractTOP",
+      "family": "TOP",
+      "subtype": "subtract"
+    },
+    {
+      "python_class": "svgTOP",
+      "family": "TOP",
+      "subtype": "svg"
+    },
+    {
+      "python_class": "switchTOP",
+      "family": "TOP",
+      "subtype": "switch"
+    },
+    {
+      "python_class": "syphonspoutinTOP",
+      "family": "TOP",
+      "subtype": "syphonspoutin"
+    },
+    {
+      "python_class": "syphonspoutoutTOP",
+      "family": "TOP",
+      "subtype": "syphonspoutout"
+    },
+    {
+      "python_class": "textTOP",
+      "family": "TOP",
+      "subtype": "text"
+    },
+    {
+      "python_class": "texture3dTOP",
+      "family": "TOP",
+      "subtype": "texture3d"
+    },
+    {
+      "python_class": "thresholdTOP",
+      "family": "TOP",
+      "subtype": "threshold"
+    },
+    {
+      "python_class": "tileTOP",
+      "family": "TOP",
+      "subtype": "tile"
+    },
+    {
+      "python_class": "timemachineTOP",
+      "family": "TOP",
+      "subtype": "timemachine"
+    },
+    {
+      "python_class": "tonemapTOP",
+      "family": "TOP",
+      "subtype": "tonemap"
+    },
+    {
+      "python_class": "touchinTOP",
+      "family": "TOP",
+      "subtype": "touchin"
+    },
+    {
+      "python_class": "touchoutTOP",
+      "family": "TOP",
+      "subtype": "touchout"
+    },
+    {
+      "python_class": "transformTOP",
+      "family": "TOP",
+      "subtype": "transform"
+    },
+    {
+      "python_class": "underTOP",
+      "family": "TOP",
+      "subtype": "under"
+    },
+    {
+      "python_class": "videodeviceinTOP",
+      "family": "TOP",
+      "subtype": "videodevicein"
+    },
+    {
+      "python_class": "videodeviceoutTOP",
+      "family": "TOP",
+      "subtype": "videodeviceout"
+    },
+    {
+      "python_class": "videostreaminTOP",
+      "family": "TOP",
+      "subtype": "videostreamin"
+    },
+    {
+      "python_class": "videostreamoutTOP",
+      "family": "TOP",
+      "subtype": "videostreamout"
+    },
+    {
+      "python_class": "viosoTOP",
+      "family": "TOP",
+      "subtype": "vioso"
+    },
+    {
+      "python_class": "webrenderTOP",
+      "family": "TOP",
+      "subtype": "webrender"
+    },
+    {
+      "python_class": "zedTOP",
+      "family": "TOP",
+      "subtype": "zed"
+    },
+    {
+      "python_class": "zedselectTOP",
+      "family": "TOP",
+      "subtype": "zedselect"
+    }
+  ]
+}

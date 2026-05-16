@@ -1,4 +1,5 @@
 import base64
+import json
 import time
 import uuid
 from pathlib import Path
@@ -8,6 +9,7 @@ from mcp.server.fastmcp import FastMCP, Image
 
 from td_mcp import __version__
 from td_mcp.bridge import bridge
+from td_mcp.kb.operators import OperatorEntry, OperatorsCatalog, get_catalog, reload_catalog
 from td_mcp.protocol import TDError
 
 mcp = FastMCP("td-mcp")
@@ -114,9 +116,22 @@ async def td_create_op(
     """Create an operator inside a parent COMP.
 
     op_type is the TD class name (e.g. 'noiseCHOP', 'rectangleTOP', 'spherePOP').
-    NOTE: op_type is currently NOT validated against the operators KB — typos
-    will raise a TD-side AttributeError. KB-backed validation lands in Phase 3.
+    KB-validated: unknown op_type returns {ok: false} with close-match
+    suggestions instead of hitting TD. Use kb_list_operators or
+    kb_get_operator to browse the catalog.
     """
+    catalog = get_catalog()
+    if not catalog.is_empty:
+        if catalog.get(op_type) is None:
+            return {
+                "ok": False,
+                "error": f"Unknown operator class: {op_type!r}",
+                "suggestions": catalog.suggest(op_type, n=5),
+                "hint": (
+                    "Use kb_list_operators(family=...) to browse, or "
+                    "kb_refresh_operators_catalog if the catalog is stale."
+                ),
+            }
     return await _call("create_op", type=op_type, parent=parent, name=name, x=x, y=y)
 
 
@@ -288,3 +303,95 @@ async def td_rollback(checkpoint_id: str) -> dict:
 async def td_list_checkpoints() -> dict:
     """List active checkpoints in this MCP session (newest last)."""
     return {"ok": True, "count": len(_checkpoints), "checkpoints": _checkpoints}
+
+
+# ─────────────────────────── knowledge base (Phase 3) ──────────────────────
+
+
+@mcp.tool()
+async def kb_list_operators(family: str | None = None, limit: int = 50) -> dict:
+    """List operators known to the catalog, optionally filtered by family.
+
+    family ∈ {CHOP, TOP, SOP, POP, DAT, COMP, MAT}. limit caps the response
+    size; full counts are always reported in `total` and `total_in_family`.
+    """
+    catalog = get_catalog()
+    if catalog.is_empty:
+        return {
+            "ok": False,
+            "error": "Catalog is empty. Run kb_refresh_operators_catalog with TD connected.",
+        }
+    entries = catalog.list(family) if family else catalog.list()
+    truncated = entries[:limit]
+    return {
+        "ok": True,
+        "total": catalog.count,
+        "by_family": catalog.family_counts(),
+        "filter_family": family,
+        "total_in_family": len(entries),
+        "returned": len(truncated),
+        "operators": [{"python_class": e.python_class, "family": e.family} for e in truncated],
+    }
+
+
+@mcp.tool()
+async def kb_get_operator(query: str) -> dict:
+    """Lookup an operator by python_class name. If not found, returns suggestions."""
+    catalog = get_catalog()
+    if catalog.is_empty:
+        return {"ok": False, "error": "Catalog is empty."}
+    entry = catalog.get(query)
+    if entry is not None:
+        return {"ok": True, "found": True, **entry.model_dump()}
+    return {
+        "ok": True,
+        "found": False,
+        "query": query,
+        "suggestions": catalog.suggest(query, n=5),
+    }
+
+
+@mcp.tool()
+async def kb_refresh_operators_catalog() -> dict:
+    """Introspect the connected TD instance, regenerate the operators catalog,
+    and persist it to td_mcp/kb/data/operators.json.
+
+    Requires an active bridge. Uses the convention that creatable op classes
+    start with a lowercase letter — abstract bases (ObjectCOMP, PanelCOMP, ...)
+    are filtered out.
+    """
+    introspect = """
+import json
+suffixes = ['CHOP', 'TOP', 'SOP', 'POP', 'DAT', 'COMP', 'MAT']
+ops = []
+for clsname in dir(td):
+    if clsname.startswith('_') or not clsname[0].islower():
+        continue
+    for suffix in suffixes:
+        if clsname.endswith(suffix) and clsname != suffix and len(clsname) > len(suffix):
+            ops.append({
+                'python_class': clsname,
+                'family': suffix,
+                'subtype': clsname[:-len(suffix)],
+            })
+            break
+print(json.dumps({'build': getattr(app, 'build', ''), 'operators': ops}))
+"""
+    result = await bridge.send("run_script", {"code": introspect})
+    raw = result.get("output", "").strip()
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as e:
+        return {"ok": False, "error": f"Parse error: {e}", "raw": raw[:500]}
+
+    entries = [OperatorEntry.model_validate(e) for e in data["operators"]]
+    entries.sort(key=lambda e: (e.family, e.python_class))
+    catalog = OperatorsCatalog(entries, td_build=data.get("build", ""))
+    catalog.save()
+    reload_catalog()
+    return {
+        "ok": True,
+        "count": len(entries),
+        "td_build": data.get("build", ""),
+        "by_family": catalog.family_counts(),
+    }
