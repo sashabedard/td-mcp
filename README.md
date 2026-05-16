@@ -61,7 +61,7 @@ Copies (not symlinks) into `~/.claude/skills/`. Re-run after pulling changes. Re
 - [x] Phase 2.5 — checkpoint/rollback
 - [x] Phase 3 — KB operators structured (Pydantic catalog + typed validation)
 - [x] Phase 3.5 — Skills authoring (`~/.claude/skills/touchdesigner*/`)
-- [ ] Phase 3.6 — Sub-KB POPs + 15-25 curated patterns
+- [~] Phase 3.6 — Sub-KB POPs scaffold + 2 seed patterns (target: 15-25 over time)
 - [x] Phase 3.7 — Sub-KB GLSL TOP + templates
 - [ ] Phase 4 — Vector KB ingestion (hybrid search + reranker)
 - [ ] Phase 4.5 — Visual techniques curated (80-150 entries)

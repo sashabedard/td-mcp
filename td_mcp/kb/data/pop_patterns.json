@@ -1,0 +1,48 @@
+{
+  "version": "0.1",
+  "schema": "POPPattern in td_mcp/kb/pop_patterns.py",
+  "td_target": "2025.32820+",
+  "patterns": [
+    {
+      "id": "point_cloud_starter",
+      "name": "Point cloud starter (boxPOP → outPOP)",
+      "description": "Minimal POP chain — a single boxPOP generator wired into an outPOP terminator inside a baseCOMP wrapper. Useful as the first step when learning POPs, or as a sanity check that your bridge + create + connect tools work.",
+      "tags": ["generator", "starter", "minimal"],
+      "difficulty": "easy",
+      "ops": [
+        {"name": "box1", "op_type": "boxPOP", "params": {}},
+        {"name": "out1", "op_type": "outPOP", "params": {}}
+      ],
+      "connections": [
+        {"out": "box1", "into": "out1"}
+      ],
+      "notes": "boxPOP generates a 6-face box mesh as points + topology. outPOP marks the chain endpoint — required for the POP family to be cookable when wrapped in a COMP and used as a Geometry source.",
+      "pitfalls": [
+        "To visualize, attach a popViewer (COMP) or wire into a Geometry COMP feeding a Render TOP — outPOP alone produces no rendered output."
+      ],
+      "verified_on_build": "2025.32820"
+    },
+    {
+      "id": "noise_displaced_grid",
+      "name": "Noise-displaced grid (gridPOP → noisePOP → outPOP)",
+      "description": "Generate a flat point grid, then modulate the P (position) attribute via noisePOP. Canonical recipe for procedural surface displacement and the foundation for most audio-reactive or time-driven POP looks.",
+      "tags": ["generator", "attribute-modifier", "displacement", "canonical"],
+      "difficulty": "easy",
+      "ops": [
+        {"name": "grid1", "op_type": "gridPOP", "params": {}},
+        {"name": "noise1", "op_type": "noisePOP", "params": {}},
+        {"name": "out1", "op_type": "outPOP", "params": {}}
+      ],
+      "connections": [
+        {"out": "grid1", "into": "noise1"},
+        {"out": "noise1", "into": "out1"}
+      ],
+      "notes": "noisePOP reads the P attribute from upstream and additively perturbs it (default behavior). Tune amplitude/period via noisePOP's params. To drive the noise period from a CHOP, expose the param as Custom and bind to a CHOP via export — or use a choptoPOP upstream to feed values per-point.",
+      "pitfalls": [
+        "noisePOP modifies P by default; if the upstream chain doesn't carry P (rare for generators, possible for filter-only chains), the noise output is undefined.",
+        "Animating period vs amplitude gives very different looks: animating period feels like 'morphing terrain', animating amplitude feels like 'breathing'."
+      ],
+      "verified_on_build": "2025.32820"
+    }
+  ]
+}

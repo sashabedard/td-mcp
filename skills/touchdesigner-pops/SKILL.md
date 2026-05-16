@@ -32,3 +32,11 @@ There is often no 1-to-1 mapping. The POP family is structured differently — s
 ## Checkpoint discipline for POP work
 
 POP chains are easy to get wrong (wrong attribute, wrong family chained in, wrong order). Wrap any experiment in a baseCOMP and `td_checkpoint` before each meaningful step — POP debugging is much harder than CHOP/TOP because state is implicit in the point cloud.
+
+## Patterns library (kb_pop_pattern)
+
+`mcp__td-mcp__kb_pop_pattern` (no args) lists curated POP workflow recipes verified live. Use this before scaffolding any POP chain — even a "minimal sphere generator" pattern saves you from inventing op names or guessing default connection semantics.
+
+If a pattern matches the user's intent, follow its `ops` + `connections` exactly: create a wrapper baseCOMP, then for each step call `td_create_op` with `parent=<wrapper>` and `name=<step.name>`, then `td_connect_ops` per `connections[i]`.
+
+The library is seed-stage — if no pattern matches, fall back to `kb_list_operators family="POP"` + `kb_get_operator` for ad-hoc work, and consider proposing a new pattern to the user once you have a working chain (so it can be authored into `td_mcp/kb/data/pop_patterns.json` for future sessions).

@@ -11,6 +11,7 @@ from td_mcp import __version__
 from td_mcp.bridge import bridge
 from td_mcp.kb.glsl import get_glsl_kb
 from td_mcp.kb.operators import OperatorEntry, OperatorsCatalog, get_catalog, reload_catalog
+from td_mcp.kb.pop_patterns import get_pop_kb
 from td_mcp.protocol import TDError
 
 mcp = FastMCP("td-mcp")
@@ -436,4 +437,43 @@ async def kb_glsl_template(template_id: str = "") -> dict:
         "ok": True,
         "template": tpl.model_dump(),
         "applicable_antipatterns": relevant,
+    }
+
+
+@mcp.tool()
+async def kb_pop_pattern(pattern_id: str = "", tag: str = "") -> dict:
+    """Curated POP workflow recipes. Phase 3.6 scaffold — small seed library
+    that the user enriches over time as they encounter real POP needs.
+
+    No args: returns the index of available patterns.
+    pattern_id: returns the full pattern (ops + connections + notes + pitfalls).
+    tag: returns all patterns matching the tag.
+
+    Each pattern's ops/connections use LOCAL names — when executing, create
+    a wrapper baseCOMP first and resolve each `name` to <wrapper>/<name>.
+    Patterns are verified live against the build noted in `verified_on_build`.
+    """
+    kb = get_pop_kb()
+    if pattern_id:
+        pat = kb.get(pattern_id)
+        if pat is None:
+            return {
+                "ok": False,
+                "error": f"Unknown pattern id: {pattern_id!r}",
+                "available": [p.id for p in kb.patterns],
+            }
+        return {"ok": True, "pattern": pat.model_dump()}
+    if tag:
+        matches = kb.by_tag(tag)
+        return {
+            "ok": True,
+            "tag": tag,
+            "count": len(matches),
+            "patterns": [p.model_dump() for p in matches],
+        }
+    return {
+        "ok": True,
+        "total": len(kb.patterns),
+        "index": kb.index(),
+        "note": "Phase 3.6 scaffold — author new patterns by editing td_mcp/kb/data/pop_patterns.json.",
     }
