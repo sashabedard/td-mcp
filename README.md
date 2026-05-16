@@ -63,13 +63,34 @@ Copies (not symlinks) into `~/.claude/skills/`. Re-run after pulling changes. Re
 - [x] Phase 3.5 — Skills authoring (`~/.claude/skills/touchdesigner*/`)
 - [~] Phase 3.6 — Sub-KB POPs scaffold + 2 seed patterns (target: 15-25 over time)
 - [x] Phase 3.7 — Sub-KB GLSL TOP + templates
-- [ ] Phase 4 — Vector KB ingestion (hybrid search + reranker)
+- [~] Phase 4 — Vector KB infra (LanceDB + BGE-M3) seeded from structured KBs; web ingestion deferred
 - [ ] Phase 4.5 — Visual techniques curated (80-150 entries)
 - [ ] Phase 5 — Workflow patterns curated (30-50, non-POP)
 - [ ] Phase 6a — Vibe loop (set_reference, iterate, visual_diff)
 - [ ] Phase 6b — Rigorous loop (state machine, propose_plan, validate)
 - [ ] Phase 7 — Evals + baseline report
 - [ ] Phase 8 — Polish, install script, semver compat check
+
+## Vector KB
+
+Optional semantic search across operators + GLSL templates + POP patterns.
+Install the `kb` extras (heavy — ~3GB including PyTorch):
+
+```bash
+pip install -e ".[kb]"
+```
+
+Then build the index from inside Claude Code:
+
+```
+kb_reindex
+kb_search query="audio reactive sphere"
+```
+
+The default embedding model is `BAAI/bge-m3` (~2GB, downloads once,
+multilingual). Override for faster iteration with `TD_MCP_EMBEDDING_MODEL`
+(e.g. `sentence-transformers/all-MiniLM-L6-v2`, ~80MB, English-only).
+Index lives in `~/.cache/td-mcp/lancedb/` (override with `TD_MCP_VECTOR_DB`).
 
 ## License
 

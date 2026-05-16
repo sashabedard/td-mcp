@@ -12,6 +12,7 @@ from td_mcp.bridge import bridge
 from td_mcp.kb.glsl import get_glsl_kb
 from td_mcp.kb.operators import OperatorEntry, OperatorsCatalog, get_catalog, reload_catalog
 from td_mcp.kb.pop_patterns import get_pop_kb
+from td_mcp.kb.vector import build_seed_chunks, get_vector_kb
 from td_mcp.protocol import TDError
 
 mcp = FastMCP("td-mcp")
@@ -476,4 +477,67 @@ async def kb_pop_pattern(pattern_id: str = "", tag: str = "") -> dict:
         "total": len(kb.patterns),
         "index": kb.index(),
         "note": "Phase 3.6 scaffold — author new patterns by editing td_mcp/kb/data/pop_patterns.json.",
+    }
+
+
+# ─────────────────────────── vector KB (Phase 4) ───────────────────────────
+
+
+@mcp.tool()
+async def kb_search(
+    query: str,
+    k: int = 10,
+    source: str | None = None,
+    family: str | None = None,
+    is_glsl: bool | None = None,
+) -> dict:
+    """Semantic search across the indexed KB corpus (operators + GLSL templates + POP patterns).
+
+    Returns top-k chunks ranked by vector similarity to the query, with
+    optional pre-filtering by source ∈ {operators, glsl_template, pop_pattern, ...},
+    family ∈ {CHOP, TOP, SOP, POP, ...}, or is_glsl.
+
+    Requires the vector index to be built — run kb_reindex first if you get
+    an empty result. The embedding model loads lazily on first call (BGE-M3
+    default ~2GB download once; override via TD_MCP_EMBEDDING_MODEL).
+    """
+    kb = get_vector_kb()
+    if not kb.has_index():
+        return {
+            "ok": False,
+            "error": "Vector index is empty. Run kb_reindex to build it from the seed sources.",
+        }
+    results = kb.search(query, k=k, source=source, family=family, is_glsl=is_glsl)
+    return {
+        "ok": True,
+        "query": query,
+        "count": len(results),
+        "results": results,
+    }
+
+
+@mcp.tool()
+async def kb_reindex() -> dict:
+    """Rebuild the vector index from all structured KBs (operators + GLSL
+    templates + POP patterns). Drops the existing index. Triggers the
+    embedding model download on first run.
+    """
+    kb = get_vector_kb()
+    chunks = build_seed_chunks()
+    if not chunks:
+        return {"ok": False, "error": "No chunks to index — KBs appear empty."}
+    result = kb.reindex(chunks)
+    return {"ok": True, **result}
+
+
+@mcp.tool()
+async def kb_vector_status() -> dict:
+    """Report on the vector index: location, model, row count, whether built."""
+    kb = get_vector_kb()
+    return {
+        "ok": True,
+        "model": kb.model_name,
+        "path": str(kb.db_path),
+        "has_index": kb.has_index(),
+        "count": kb.count(),
     }
