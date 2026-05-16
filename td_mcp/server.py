@@ -1,4 +1,7 @@
 import base64
+import time
+import uuid
+from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP, Image
@@ -8,6 +11,21 @@ from td_mcp.bridge import bridge
 from td_mcp.protocol import TDError
 
 mcp = FastMCP("td-mcp")
+
+# Per-process checkpoint registry. FIFO at MAX_CHECKPOINTS. .tox files survive
+# server restarts on disk; the in-memory list does not — restart-safe listing
+# would require a manifest file, deferred until cross-session resume matters.
+_checkpoints: list[dict] = []
+MAX_CHECKPOINTS = 20
+_project_folder_cache: str | None = None
+
+
+async def _get_project_folder() -> str:
+    global _project_folder_cache
+    if _project_folder_cache is None:
+        result = await bridge.send("get_project_folder")
+        _project_folder_cache = result["folder"]
+    return _project_folder_cache
 
 
 async def _call(action: str, **data: Any) -> dict:
@@ -203,3 +221,70 @@ async def td_snapshot(op_path: str) -> Image:
     result = await bridge.send("snapshot", {"op": op_path})
     png_bytes = base64.b64decode(result["base64"])
     return Image(data=png_bytes, format="png")
+
+
+# ─────────────────────────── checkpoint / rollback ─────────────────────────
+
+
+@mcp.tool()
+async def td_checkpoint(comp_path: str, label: str = "") -> dict:
+    """Export a COMP to a timestamped .tox snapshot for later rollback.
+
+    The .tox file is written to <td_project_folder>/.td_mcp_snapshots/<id>.tox.
+    FIFO at 20 checkpoints per session: older snapshots are deleted from disk.
+
+    LIMITATIONS:
+    - Target must be a COMP (any family), not a leaf op.
+    - Cannot checkpoint root (/project1) — wrap your experiment in a COMP first.
+    - External wires entering or leaving the COMP are NOT preserved on rollback,
+      because TD's loadTox replaces the operator entirely.
+    """
+    folder = Path(await _get_project_folder())
+    cp_dir = folder / ".td_mcp_snapshots"
+    cp_dir.mkdir(exist_ok=True)
+    cp_id = f"cp_{int(time.time() * 1000)}_{uuid.uuid4().hex[:6]}"
+    file_path = str(cp_dir / f"{cp_id}.tox")
+
+    result = await _call("checkpoint", comp_path=comp_path, file_path=file_path)
+    if not result.get("ok"):
+        return result
+
+    entry = {
+        "id": cp_id,
+        "label": label,
+        "comp_path": comp_path,
+        "file_path": file_path,
+        "timestamp": time.time(),
+    }
+    _checkpoints.append(entry)
+
+    # FIFO eviction: drop oldest, also remove its .tox from disk
+    while len(_checkpoints) > MAX_CHECKPOINTS:
+        old = _checkpoints.pop(0)
+        try:
+            Path(old["file_path"]).unlink()
+        except FileNotFoundError:
+            pass
+
+    return {"ok": True, **entry}
+
+
+@mcp.tool()
+async def td_rollback(checkpoint_id: str) -> dict:
+    """Restore a previously checkpointed COMP from its .tox snapshot.
+
+    The current COMP at the checkpointed path is destroyed and re-imported
+    from disk. Name and node position are preserved. External wires are lost.
+    """
+    entry = next((c for c in _checkpoints if c["id"] == checkpoint_id), None)
+    if entry is None:
+        return {"ok": False, "error": f"Unknown checkpoint id: {checkpoint_id}"}
+    return await _call(
+        "rollback", comp_path=entry["comp_path"], file_path=entry["file_path"]
+    )
+
+
+@mcp.tool()
+async def td_list_checkpoints() -> dict:
+    """List active checkpoints in this MCP session (newest last)."""
+    return {"ok": True, "count": len(_checkpoints), "checkpoints": _checkpoints}

@@ -198,6 +198,43 @@ def _dispatch(action, data):
             b64 = base64.b64encode(f.read()).decode('utf-8')
         return {'base64': b64, 'width': target.width, 'height': target.height}
 
+    elif action == 'get_project_folder':
+        return {'folder': project.folder}
+
+    elif action == 'checkpoint':
+        comp_path = data['comp_path']
+        file_path = data['file_path']
+        target = op(comp_path)
+        if not target:
+            raise Exception(f'Operator not found: {comp_path}')
+        if not target.isCOMP:
+            raise Exception(f'Checkpoint target must be a COMP: {comp_path} is {target.type}')
+        # comp.save() exports a .tox of just this COMP (children + params)
+        target.save(file_path)
+        return {'comp_path': comp_path, 'file_path': file_path}
+
+    elif action == 'rollback':
+        comp_path = data['comp_path']
+        file_path = data['file_path']
+        target = op(comp_path)
+        if not target:
+            raise Exception(f'Operator not found: {comp_path} (was deleted since checkpoint)')
+        parent = target.parent()
+        if parent is None:
+            raise Exception(f'Cannot rollback root COMP: {comp_path}')
+        # Preserve identity before destroying
+        name = target.name
+        x, y = target.nodeX, target.nodeY
+        target.destroy()
+        # loadTox re-imports the saved component at the same parent
+        restored = parent.loadTox(file_path)
+        if restored is None:
+            raise Exception(f'loadTox returned None for {file_path}')
+        restored.name = name
+        restored.nodeX = x
+        restored.nodeY = y
+        return {'restored_path': restored.path, 'file_path': file_path}
+
     else:
         raise Exception(f'Unknown action: {action}')
 
