@@ -63,7 +63,8 @@ Copies (not symlinks) into `~/.claude/skills/`. Re-run after pulling changes. Re
 - [x] Phase 3.5 — Skills authoring (`~/.claude/skills/touchdesigner*/`)
 - [~] Phase 3.6 — Sub-KB POPs scaffold + 2 seed patterns (target: 15-25 over time)
 - [x] Phase 3.7 — Sub-KB GLSL TOP + templates
-- [~] Phase 4 — Vector KB infra (LanceDB + BGE-M3) seeded from structured KBs; web ingestion deferred
+- [~] Phase 4 — Vector KB infra (LanceDB + BGE-M3) seeded from structured KBs
+- [~] Phase 4.1 — derivative.ca wiki ingest for POPs (100 pages); other families pending
 - [ ] Phase 4.5 — Visual techniques curated (80-150 entries)
 - [ ] Phase 5 — Workflow patterns curated (30-50, non-POP)
 - [ ] Phase 6a — Vibe loop (set_reference, iterate, visual_diff)

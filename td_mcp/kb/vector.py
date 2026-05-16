@@ -268,4 +268,9 @@ def build_seed_chunks() -> list[Chunk]:
             )
         )
 
+    # Wiki chunks from cache (no network call — kb_ingest_wiki populates the cache)
+    from td_mcp.ingest.wiki import build_wiki_chunks_from_cache
+
+    chunks.extend(build_wiki_chunks_from_cache())
+
     return chunks

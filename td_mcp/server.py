@@ -541,3 +541,39 @@ async def kb_vector_status() -> dict:
         "has_index": kb.has_index(),
         "count": kb.count(),
     }
+
+
+@mcp.tool()
+async def kb_ingest_wiki(family: str = "POP", limit: int | None = None) -> dict:
+    """Scrape derivative.ca wiki pages for an op family (default POP) and
+    cache them locally. Polite: 1 req/sec floor, identifies as td-mcp.
+
+    Does NOT automatically reindex — call kb_reindex afterward to fold the
+    new wiki chunks into the vector store. Repeat calls reuse the cache,
+    so re-running is free.
+
+    family ∈ {CHOP, TOP, SOP, POP, DAT, MAT}. limit caps the number of
+    pages fetched per family (useful for smoke-testing without the full
+    ~100-page run).
+    """
+    from td_mcp.ingest.wiki import WikiClient, ingest_family, manifest
+
+    with WikiClient() as client:
+        chunks = ingest_family(family, client, limit=limit)
+
+    m = manifest()
+    return {
+        "ok": True,
+        "family": family,
+        "fetched": len(chunks),
+        "cache": m,
+        "next_step": "Call kb_reindex to fold wiki chunks into the vector store.",
+    }
+
+
+@mcp.tool()
+async def kb_wiki_status() -> dict:
+    """Report on the local wiki cache: location, file count, total bytes."""
+    from td_mcp.ingest.wiki import manifest
+
+    return {"ok": True, **manifest()}
