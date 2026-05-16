@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+.DS_Store
+
+# Runtime artifacts
+.td_mcp_snapshots/
+*.lancedb/
+knowledge_index/
+
+# IDE
+.vscode/
+.idea/
