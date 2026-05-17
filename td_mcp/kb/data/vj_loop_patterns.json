@@ -1,0 +1,34 @@
+{
+  "patterns": [
+    {
+      "pattern_name": "feedback_kaleidoscope",
+      "tempo_bpm_range": [90, 130],
+      "energy": "medium",
+      "palette": ["#ff00aa", "#00aaff", "#000000"],
+      "key_operators": ["feedbackTOP", "transformTOP", "compositeTOP"],
+      "glsl_hint": null,
+      "description_fr": "Boucle de rétroaction avec transform en rotation continue, effet kaléidoscope hypnotique.",
+      "tags": ["geometric", "feedback", "hypnotic"]
+    },
+    {
+      "pattern_name": "instanced_grid_pulse",
+      "tempo_bpm_range": [110, 140],
+      "energy": "high",
+      "palette": ["#ffffff", "#000000", "#ff3300"],
+      "key_operators": ["gridSOP", "geometryCOMP", "audiofileinCHOP", "analyzeCHOP"],
+      "glsl_hint": null,
+      "description_fr": "Grille d'instances 3D pulsant sur RMS audio, contraste fort.",
+      "tags": ["geometric", "audio_reactive", "high_energy"]
+    },
+    {
+      "pattern_name": "noise_warp_calm",
+      "tempo_bpm_range": [60, 90],
+      "energy": "calm",
+      "palette": ["#1a2a4a", "#6a8aaa", "#ffffff"],
+      "key_operators": ["noiseTOP", "displaceTOP", "blurTOP"],
+      "glsl_hint": "fbm displacement with low frequency",
+      "description_fr": "Déformation lente par noise basse fréquence, palette froide, contemplatif.",
+      "tags": ["calm", "organic", "ambient"]
+    }
+  ]
+}
