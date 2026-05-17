@@ -840,3 +840,20 @@ async def kb_ingest_vj_corpus(url_list_path: str) -> dict:
         return {"ok": True, "report": report}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+
+@mcp.tool()
+async def kb_ingest_shadertoy_shaders(queries: list[str], num_per_query: int = 24) -> dict:
+    """Search Shadertoy and cache shader source for the given queries.
+
+    Requires TD_MCP_SHADERTOY_API_KEY env var. Free key from
+    shadertoy.com/myapps. Each query is searched, each result is
+    fetched and cached on disk. After ingestion, call kb_reindex to
+    push cached chunks into the vector KB.
+    """
+    from td_mcp.ingest.shaders_shadertoy import ingest_shadertoy
+    try:
+        report = ingest_shadertoy(queries=queries, num_per_query=num_per_query)
+        return {"ok": True, "report": report}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
