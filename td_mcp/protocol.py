@@ -32,3 +32,31 @@ class TDError(RuntimeError):
 
 
 OpFamily = Literal["CHOP", "TOP", "SOP", "DAT", "COMP", "MAT", "POP"]
+
+
+class OperatorPosition(BaseModel):
+    path: str
+    x: int
+    y: int
+
+
+class OperatorRename(BaseModel):
+    old_path: str
+    new_path: str
+    reason: str  # ex: "downstream of audiofilein → suffix audioRMS"
+
+
+class AnnotationSpec(BaseModel):
+    cluster_name: str  # ex: "Audio reactive"
+    member_paths: list[str]
+    bbox_x: int
+    bbox_y: int
+    bbox_w: int
+    bbox_h: int
+
+
+class LayoutDiff(BaseModel):
+    moved: list[OperatorPosition] = []
+    renamed: list[OperatorRename] = []
+    annotations_added: list[AnnotationSpec] = []
+    checkpoint_id: str = ""
