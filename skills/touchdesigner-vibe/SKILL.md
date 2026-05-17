@@ -1,12 +1,25 @@
 ---
 name: touchdesigner-vibe
-description: Use when reproducing a visual reference (image, video, description, or stated intent) in TouchDesigner. Triggers when the user supplies a reference and asks for a TD reproduction, says "make it look like", "reproduce this", "vibe", "like in <artist/post>", or otherwise frames the task as iterative visual matching rather than rigorous engineering.
+description: Use when reproducing a visual reference (image, video, description, or stated intent) in TouchDesigner. Triggers when the user supplies a reference and asks for a TD reproduction, says "make it look like", "reproduce this", "vibe", "like in <artist/post>", "VJ loop", "boucle visuelle", "loop visuel", "cinématique", "cinematic", "DOF", "depth of field", "lumablur", "flou lumineux", "bokeh", or otherwise frames the task as iterative visual matching rather than rigorous engineering.
 version: 0.1.0
 ---
 
 # Vibe loop protocol
 
 Vibe mode is short-loop iteration with visual feedback. Speed and approximation matter more than rigor; the user judges by looking at snapshots, not by spec compliance.
+
+## Reference grounding
+
+When the user mentions a **VJ loop** (or boucle visuelle / loop), call
+`kb_get_vj_loop_reference(query=<their description>)` *before* creating
+ops. The returned patterns carry the canonical operator chains and (if
+the corpus is ingested) frame URLs to ground the visual target.
+
+When the user asks for a **cinematic** look, **DOF**, **lumablur**, or
+**bokeh**, call `kb_get_cinematic_recipe(look=<closest match>)`. Looks
+are a strict Literal — if uncertain, the error response lists available
+values. Never invent param names like `focalDistance` — use the
+param_values from the recipe.
 
 ## Protocol
 
