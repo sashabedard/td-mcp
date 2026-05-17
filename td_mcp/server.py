@@ -805,6 +805,23 @@ async def td_layout_network(path: str = "/", mode: str = "grid_annotated") -> di
 
 
 @mcp.tool()
+async def kb_ingest_geeks3d_shaders(limit: int | None = None) -> dict:
+    """Scrape and cache shader articles from geeks3d.com/shader-library/.
+
+    Polite scraper (1 req/sec, cached on disk). `limit` caps how many
+    articles to fetch in one run — useful for incremental ingestion.
+    After ingestion, call kb_reindex to push cached chunks into the
+    vector KB.
+    """
+    from td_mcp.ingest.shaders_geeks3d import ingest_geeks3d
+    try:
+        report = ingest_geeks3d(limit=limit)
+        return {"ok": True, "report": report}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@mcp.tool()
 async def kb_ingest_vj_corpus(url_list_path: str) -> dict:
     """Run the VJ loops ingestion pipeline against a JSON URL list.
 

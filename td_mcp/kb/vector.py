@@ -31,7 +31,8 @@ DEFAULT_DB_PATH = Path(
 TABLE_NAME = "chunks"
 
 ChunkSource = Literal[
-    "operators", "glsl_template", "pop_pattern", "wiki", "tutorial", "forum"
+    "operators", "glsl_template", "pop_pattern", "wiki", "tutorial", "forum",
+    "shader_geeks3d", "shader_shadertoy"
 ]
 
 
@@ -98,9 +99,17 @@ class VectorKB:
             self._db = lancedb.connect(str(self.db_path))
         return self._db
 
-    def _embed(self, texts: list[str]) -> list[list[float]]:
+    def _embed(self, texts: list[str], batch_size: int = 8) -> list[list[float]]:
+        # batch_size=8 keeps peak memory bounded on CPU/MPS — without it
+        # large corpora (BGE-M3 with 8K context) trigger 60+GB allocations
+        # and crash the embed call.
         model = self._get_model()
-        vecs = model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
+        vecs = model.encode(
+            texts,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+            batch_size=batch_size,
+        )
         return [v.tolist() for v in vecs]
 
     def has_index(self) -> bool:
