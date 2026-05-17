@@ -9,6 +9,7 @@ from mcp.server.fastmcp import FastMCP, Image
 
 from td_mcp import __version__
 from td_mcp.bridge import bridge
+from td_mcp.kb.cinematic import get_cinematic_kb
 from td_mcp.kb.glsl import get_glsl_kb
 from td_mcp.kb.operators import OperatorEntry, OperatorsCatalog, get_catalog, reload_catalog
 from td_mcp.kb.pop_patterns import get_pop_kb
@@ -653,3 +654,23 @@ async def kb_youtube_status() -> dict:
     from td_mcp.ingest.youtube import manifest
 
     return {"ok": True, **manifest()}
+
+
+@mcp.tool()
+async def kb_get_cinematic_recipe(look: str) -> dict:
+    """Return a typed cinematic look recipe (operator chain, params, pitfalls).
+
+    Valid looks: dof_shallow, dof_rack_focus, lumablur_soft, lumablur_bloom,
+    anamorphic_flare, filmic_grade, volumetric_god_rays, motion_blur_velocity,
+    chromatic_aberration_subtle, film_grain_clean. Lookup is exact-match
+    against the Literal — no fuzzy search.
+    """
+    kb = get_cinematic_kb()
+    recipe = kb.get(look)
+    if recipe is None:
+        return {
+            "ok": False,
+            "error": f"unknown look '{look}'",
+            "available": kb.list_looks(),
+        }
+    return {"ok": True, "recipe": recipe.model_dump()}

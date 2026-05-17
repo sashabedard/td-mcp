@@ -29,3 +29,23 @@ def test_kb_lookup_by_look_literal():
 def test_kb_unknown_look_returns_none():
     kb = get_cinematic_kb()
     assert kb.get("dof_shallow_typo_zzz") is None
+
+
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_kb_get_cinematic_recipe_returns_known_look():
+    from td_mcp.server import kb_get_cinematic_recipe
+    result = await kb_get_cinematic_recipe(look="dof_shallow")
+    assert result["ok"] is True
+    assert result["recipe"]["look"] == "dof_shallow"
+
+
+@pytest.mark.asyncio
+async def test_kb_get_cinematic_recipe_unknown_look():
+    from td_mcp.server import kb_get_cinematic_recipe
+    result = await kb_get_cinematic_recipe(look="dof_shallow_typo_zzz")
+    assert result["ok"] is False
+    assert "unknown" in result["error"].lower()
+    assert "available" in result
