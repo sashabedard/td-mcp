@@ -15,6 +15,174 @@
         "fstop below 1.0 produces unrealistic bokeh"
       ],
       "example_screenshot_url": null
+    },
+    {
+      "look": "dof_rack_focus",
+      "operator_chain": [
+        {"op_type": "cameraCOMP", "role": "camera", "notes": "focaldist parameter driven by LFO or animation CHOP"},
+        {"op_type": "lfoCHOP", "role": "animate focus distance", "notes": "slow sine wave between near and far subject distances"},
+        {"op_type": "renderTOP", "role": "render", "notes": "enable Depth Buffer output for post-process DoF"}
+      ],
+      "param_values": {
+        "cameraCOMP": {"focallength": 85.0, "fstop": 1.8},
+        "lfoCHOP": {"type": 0, "freq": 0.25, "amp": 3.0, "phase": 0.0},
+        "renderTOP": {"depth": true}
+      },
+      "common_pitfalls": [
+        "Export the lfoCHOP channel directly to cameraCOMP focaldist via CHOP export or python expression",
+        "LFO type 0 is sine — use a slow freq (0.1–0.3 Hz) for cinematic rack pacing",
+        "Racking too fast looks mechanical; ease in/out with a lagCHOP after the LFO"
+      ],
+      "example_screenshot_url": null
+    },
+    {
+      "look": "lumablur_soft",
+      "operator_chain": [
+        {"op_type": "blurTOP", "role": "full-image soften", "notes": "uniform Gaussian blur across entire image, small radius for dreamy softness"},
+        {"op_type": "compositeTOP", "role": "blend with original", "notes": "operand=over with alpha mix to preserve detail"}
+      ],
+      "param_values": {
+        "blurTOP": {"size": 4.0, "passes": 2},
+        "compositeTOP": {"operand": "over", "alpha": 0.35}
+      },
+      "common_pitfalls": [
+        "A large radius without compositing back destroys detail — keep size under 8 or blend",
+        "Increasing passes is cheaper than a single very large radius for smooth results",
+        "For a full diffusion glow effect blend with screen instead of over"
+      ],
+      "example_screenshot_url": null
+    },
+    {
+      "look": "lumablur_bloom",
+      "operator_chain": [
+        {"op_type": "lumaLevelTOP", "role": "isolate highlights", "notes": "lift black point to isolate brights"},
+        {"op_type": "blurTOP", "role": "soften", "notes": "wide radius, multi-pass"},
+        {"op_type": "compositeTOP", "role": "add to original", "notes": "operand=add"}
+      ],
+      "param_values": {
+        "lumaLevelTOP": {"blacklevel": 0.7, "whitelevel": 1.0},
+        "blurTOP": {"size": 32.0, "passes": 3},
+        "compositeTOP": {"operand": "add"}
+      },
+      "common_pitfalls": [
+        "Without lumaLevel isolation the entire image blurs, not just highlights",
+        "Add operand on Composite TOP must be set explicitly, default is over"
+      ],
+      "example_screenshot_url": null
+    },
+    {
+      "look": "anamorphic_flare",
+      "operator_chain": [
+        {"op_type": "lumaLevelTOP", "role": "isolate specular hotspots", "notes": "high blacklevel extracts lens flare sources"},
+        {"op_type": "transformTOP", "role": "squeeze vertically", "notes": "scale Y < 1 to simulate anamorphic squeeze on the flare layer"},
+        {"op_type": "blurTOP", "role": "horizontal streak", "notes": "set blur direction to horizontal only, large X radius"},
+        {"op_type": "compositeTOP", "role": "composite streak over original", "notes": "operand=add or screen"}
+      ],
+      "param_values": {
+        "lumaLevelTOP": {"blacklevel": 0.85, "whitelevel": 1.0},
+        "transformTOP": {"sy": 0.15, "sx": 1.0},
+        "blurTOP": {"size": 64.0, "passes": 2, "dirx": 1.0, "diry": 0.0},
+        "compositeTOP": {"operand": "add"}
+      },
+      "common_pitfalls": [
+        "blurTOP direction parameters are dirx/diry as normalized vectors — set diry to 0 for pure horizontal streak",
+        "Squeeze must happen before blur, not after, or the streak will be circular",
+        "Blue tint the streak layer with a levelTOP to replicate anamorphic blue lens character"
+      ],
+      "example_screenshot_url": null
+    },
+    {
+      "look": "filmic_grade",
+      "operator_chain": [
+        {"op_type": "levelTOP", "role": "exposure and lift", "notes": "lift blacks slightly, reduce white ceiling for filmic contrast roll-off"},
+        {"op_type": "lookupTOP", "role": "apply LUT / color transform", "notes": "load a 1D or 3D LUT texture for filmic tone mapping"}
+      ],
+      "param_values": {
+        "levelTOP": {"blacklevel": 0.04, "whitelevel": 0.95, "gamma": 1.1, "bright": 0.0, "contrast": 0.05},
+        "lookupTOP": {"chanr": 0, "chang": 1, "chanb": 2}
+      },
+      "common_pitfalls": [
+        "lookupTOP expects the LUT image in the second input — a horizontal 1D gradient image mapped to output colors",
+        "For a 3D LUT use a cube-strip texture and set the Lookup TOP to 3D mode",
+        "Apply grading in linear light before any gamma correction, then add a gammaCorrectTOP at the end"
+      ],
+      "example_screenshot_url": null
+    },
+    {
+      "look": "volumetric_god_rays",
+      "operator_chain": [
+        {"op_type": "renderTOP", "role": "render scene", "notes": "render with a bright occluder/light source visible"},
+        {"op_type": "glslTOP", "role": "radial blur / light scattering", "notes": "multi-tap radial blur centered on light source screen position"},
+        {"op_type": "compositeTOP", "role": "add rays to original render", "notes": "operand=add, control intensity with level"}
+      ],
+      "param_values": {
+        "renderTOP": {"depth": false},
+        "glslTOP": {"numsamples": 64, "decay": 0.96, "weight": 0.5, "exposure": 0.18},
+        "compositeTOP": {"operand": "add"}
+      },
+      "common_pitfalls": [
+        "The GLSL shader needs the light source screen-space UV position as a uniform — pass it via a glslTOP uniform parameter",
+        "Too many samples (>128) tanks GPU performance — 32–64 is the cinematic sweet spot",
+        "Mask out the occluder shape before the radial blur so rays don't bleed through solid geometry"
+      ],
+      "example_screenshot_url": null
+    },
+    {
+      "look": "motion_blur_velocity",
+      "operator_chain": [
+        {"op_type": "renderTOP", "role": "render scene with velocity pass", "notes": "enable Velocity output in render TOP for depth-aware motion vectors"},
+        {"op_type": "glslTOP", "role": "velocity-based directional blur", "notes": "sample along per-pixel velocity vector for physically correct motion blur"},
+        {"op_type": "compositeTOP", "role": "composite over original", "notes": "blend amount controls shutter-angle effect"}
+      ],
+      "param_values": {
+        "renderTOP": {"velocity": true, "depth": true},
+        "glslTOP": {"numsamples": 16, "shutterscale": 1.0},
+        "compositeTOP": {"operand": "over", "alpha": 1.0}
+      },
+      "common_pitfalls": [
+        "renderTOP must output a velocity pass — check the Render TOP Buffers page for the velocity output toggle",
+        "Velocity vectors are in clip space; scale by shutterscale uniform to control blur length",
+        "Static geometry with fast camera moves still needs velocity computed from camera matrix delta per frame"
+      ],
+      "example_screenshot_url": null
+    },
+    {
+      "look": "chromatic_aberration_subtle",
+      "operator_chain": [
+        {"op_type": "reorderTOP", "role": "split into RGB channels", "notes": "output separate R, G, B planes for independent offset"},
+        {"op_type": "transformTOP", "role": "offset red channel outward", "notes": "small translate on R channel away from center"},
+        {"op_type": "transformTOP", "role": "offset blue channel inward", "notes": "small opposite translate on B channel toward center"},
+        {"op_type": "reorderTOP", "role": "recombine channels", "notes": "merge offset R, original G, offset B back to RGB"}
+      ],
+      "param_values": {
+        "reorderTOP": {"chanr": 0, "chang": 1, "chanb": 2, "chana": 3},
+        "transformTOP": {"tx": 0.003, "ty": 0.001}
+      },
+      "common_pitfalls": [
+        "Offset is in UV space (0–1 range) — values above 0.01 look like a glitch, not a lens aberration",
+        "Apply the effect only at frame edges using a radial mask composited with the aberrated version",
+        "Use two separate transformTOPs for R and B with opposite signs — do not try to offset G"
+      ],
+      "example_screenshot_url": null
+    },
+    {
+      "look": "film_grain_clean",
+      "operator_chain": [
+        {"op_type": "noiseTOP", "role": "generate per-frame luminance noise", "notes": "monochrome noise, small amplitude, re-seed each frame for temporal variation"},
+        {"op_type": "levelTOP", "role": "center noise around zero", "notes": "shift noise range from 0–1 to -0.5–0.5 for additive overlay"},
+        {"op_type": "compositeTOP", "role": "add grain to image", "notes": "operand=add at low opacity; screen operand for brighter grain character"}
+      ],
+      "param_values": {
+        "noiseTOP": {"type": 5, "period": 1.0, "amp": 0.08, "mono": true},
+        "levelTOP": {"blacklevel": -0.5, "whitelevel": 0.5},
+        "compositeTOP": {"operand": "add", "alpha": 0.5}
+      },
+      "common_pitfalls": [
+        "Static noise looks like a texture, not grain — drive noiseTOP seed with absTime.frame for per-frame variation",
+        "Grain amplitude above 0.12 reads as heavy VHS noise rather than clean film grain",
+        "Use a screenCHOP or math to keep output in 0–1 range after addition to avoid clipping bright areas"
+      ],
+      "example_screenshot_url": null
     }
   ]
 }

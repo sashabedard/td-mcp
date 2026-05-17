@@ -49,3 +49,11 @@ async def test_kb_get_cinematic_recipe_unknown_look():
     assert result["ok"] is False
     assert "unknown" in result["error"].lower()
     assert "available" in result
+
+
+def test_all_literal_looks_have_recipes():
+    from typing import get_args
+    from td_mcp.kb.cinematic import CinematicLook, get_cinematic_kb
+    kb = get_cinematic_kb()
+    for look in get_args(CinematicLook):
+        assert kb.get(look) is not None, f"missing recipe for {look}"
