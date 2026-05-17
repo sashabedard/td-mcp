@@ -10,6 +10,7 @@ from mcp.server.fastmcp import FastMCP, Image
 from td_mcp import __version__
 from td_mcp.bridge import bridge
 from td_mcp.kb.cinematic import get_cinematic_kb
+from td_mcp.kb.vj_loops import get_vj_loops_kb
 from td_mcp.kb.glsl import get_glsl_kb
 from td_mcp.kb.operators import OperatorEntry, OperatorsCatalog, get_catalog, reload_catalog
 from td_mcp.kb.pop_patterns import get_pop_kb
@@ -674,3 +675,22 @@ async def kb_get_cinematic_recipe(look: str) -> dict:
             "available": kb.list_looks(),
         }
     return {"ok": True, "recipe": recipe.model_dump()}
+
+
+@mcp.tool()
+async def kb_get_vj_loop_reference(query: str = "", top_k: int = 3) -> dict:
+    """Return curated VJ loop patterns matching the natural-language query.
+
+    Each pattern is a typed structure (tempo, energy, palette, key
+    operators, description). When the VJ visual corpus is ingested via
+    kb_ingest_vj_corpus, patterns also carry visual_refs to similar
+    frames from the corpus. Use this to ground 'VJ loop' requests in
+    concrete references instead of hallucinated operator names.
+    """
+    kb = get_vj_loops_kb()
+    patterns = kb.search(query, top_k=top_k)
+    return {
+        "ok": True,
+        "patterns": [p.model_dump() for p in patterns],
+        "total_in_kb": len(kb.patterns),
+    }

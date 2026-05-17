@@ -26,3 +26,23 @@ def test_kb_text_search_returns_top_k():
     results = kb.search("calme géométrique", top_k=3)
     assert len(results) <= 3
     assert all(isinstance(r, VJLoopPattern) for r in results)
+
+
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_kb_get_vj_loop_reference_returns_results():
+    from td_mcp.server import kb_get_vj_loop_reference
+    result = await kb_get_vj_loop_reference(query="calme organique", top_k=2)
+    assert result["ok"] is True
+    assert "patterns" in result
+    assert len(result["patterns"]) <= 2
+
+
+@pytest.mark.asyncio
+async def test_kb_get_vj_loop_reference_empty_query_returns_all_capped():
+    from td_mcp.server import kb_get_vj_loop_reference
+    result = await kb_get_vj_loop_reference(query="", top_k=3)
+    assert result["ok"] is True
+    assert len(result["patterns"]) <= 3
