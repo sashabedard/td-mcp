@@ -94,6 +94,15 @@ multilingual). Override for faster iteration with `TD_MCP_EMBEDDING_MODEL`
 (e.g. `sentence-transformers/all-MiniLM-L6-v2`, ~80MB, English-only).
 Index lives in `~/.cache/td-mcp/lancedb/` (override with `TD_MCP_VECTOR_DB`).
 
+## VJ / Cinematic / Layout tools
+
+- `kb_get_cinematic_recipe(look)` — typed cinematic recipes (DOF, lumablur, anamorphic, etc.)
+- `kb_get_vj_loop_reference(query, top_k)` — curated VJ loop patterns + visual refs
+- `kb_ingest_vj_corpus(url_list_path)` — pipeline yt-dlp+ffmpeg+CLIP+Haiku → LanceDB
+- `td_layout_network(path, mode)` — geometric layout + cluster annotations + semantic rename
+
+Install the VJ extras for corpus ingestion: `pip install -e ".[vj]"` (requires GPU for CLIP).
+
 ## License
 
 MIT
