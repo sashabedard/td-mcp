@@ -15,7 +15,13 @@ from td_mcp.kb.glsl import get_glsl_kb
 from td_mcp.kb.operators import OperatorEntry, OperatorsCatalog, get_catalog, reload_catalog
 from td_mcp.kb.pop_patterns import get_pop_kb
 from td_mcp.kb.vector import build_seed_chunks, get_vector_kb
-from td_mcp.protocol import TDError
+from td_mcp.protocol import AnnotationSpec, LayoutDiff, OperatorPosition, OperatorRename, TDError
+from td_mcp.tools.layout import (
+    assign_columns_by_depth,
+    detect_clusters,
+    geometric_layout,
+    propose_rename,
+)
 
 mcp = FastMCP("td-mcp")
 
@@ -694,3 +700,104 @@ async def kb_get_vj_loop_reference(query: str = "", top_k: int = 3) -> dict:
         "patterns": [p.model_dump() for p in patterns],
         "total_in_kb": len(kb.patterns),
     }
+
+
+# ─────────────────────────── layout orchestration ──────────────────────────
+
+
+@mcp.tool()
+async def td_layout_network(path: str = "/", mode: str = "grid_annotated") -> dict:
+    """Reorganize a TD network: topological grid, optional cluster annotations
+    and semantic renaming of generic ops.
+
+    Modes:
+    - "grid": geometric grid only (move ops on a column-by-family grid)
+    - "grid_annotated": grid + cluster Annotate COMPs + generic-name renaming
+
+    Creates a checkpoint before applying changes. Returns a diff with the
+    checkpoint id so changes can be rolled back via td_rollback.
+    """
+    if mode not in ("grid", "grid_annotated"):
+        return {"ok": False, "error": f"unknown mode '{mode}'"}
+
+    network = await _call("get_network", path=path)
+    if not network.get("ok"):
+        return network
+    ops = network.get("ops", [])
+    connections = network.get("connections", [])
+
+    if not ops:
+        return {"ok": True, "diff": LayoutDiff().model_dump()}
+
+    edges = [(c["src"], c["dst"]) for c in connections]
+    op_paths = [o["path"] for o in ops]
+    columns = assign_columns_by_depth(op_paths, edges)
+
+    ops_meta_for_layout = [
+        {"path": o["path"], "family": o["family"], "column": columns.get(o["path"], 0)}
+        for o in ops
+    ]
+    positions = geometric_layout(ops_meta_for_layout)
+    moved = [
+        OperatorPosition(path=p, x=xy[0], y=xy[1])
+        for p, xy in positions.items()
+    ]
+
+    annotations: list[AnnotationSpec] = []
+    renames: list[OperatorRename] = []
+    if mode == "grid_annotated":
+        ops_meta_for_clusters = [
+            {"path": o["path"], "op_type": o["op_type"]} for o in ops
+        ]
+        clusters = detect_clusters(ops_meta_for_clusters, edges)
+        for c in clusters:
+            member_positions = [positions[m] for m in c["members"] if m in positions]
+            if not member_positions:
+                continue
+            xs = [p[0] for p in member_positions]
+            ys = [p[1] for p in member_positions]
+            annotations.append(AnnotationSpec(
+                cluster_name=c["name"],
+                member_paths=c["members"],
+                bbox_x=min(xs) - 20,
+                bbox_y=min(ys) - 20,
+                bbox_w=(max(xs) - min(xs)) + 220,
+                bbox_h=(max(ys) - min(ys)) + 170,
+            ))
+
+        upstream_types_by_op: dict[str, list[str]] = {o["path"]: [] for o in ops}
+        type_by_path = {o["path"]: o["op_type"] for o in ops}
+        for src, dst in edges:
+            if src in type_by_path and dst in upstream_types_by_op:
+                upstream_types_by_op[dst].append(type_by_path[src])
+        for o in ops:
+            new_name = propose_rename(o, upstream_types_by_op[o["path"]])
+            if new_name:
+                parent = o["path"].rsplit("/", 1)[0]
+                renames.append(OperatorRename(
+                    old_path=o["path"],
+                    new_path=f"{parent}/{new_name}",
+                    reason=f"generic name + upstream {upstream_types_by_op[o['path']]}",
+                ))
+
+    ckpt = await _call("checkpoint", label=f"pre-layout {path}")
+    if not ckpt.get("ok"):
+        return ckpt
+    checkpoint_id = ckpt.get("checkpoint_id", "")
+
+    apply_payload = {
+        "moves": [m.model_dump() for m in moved],
+        "renames": [r.model_dump() for r in renames],
+        "annotations": [a.model_dump() for a in annotations],
+    }
+    apply_result = await _call("apply_layout", path=path, **apply_payload)
+    if not apply_result.get("ok"):
+        return apply_result
+
+    diff = LayoutDiff(
+        moved=moved,
+        renamed=renames,
+        annotations_added=annotations,
+        checkpoint_id=checkpoint_id,
+    )
+    return {"ok": True, "diff": diff.model_dump()}

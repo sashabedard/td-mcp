@@ -64,3 +64,41 @@ def test_propose_rename_audio_downstream():
 def test_propose_rename_keeps_non_generic_names():
     op = {"path": "/p/myImportantThing", "op_type": "nullCHOP"}
     assert propose_rename(op, []) is None
+
+
+from unittest.mock import AsyncMock, patch
+
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_td_layout_network_empty_returns_empty_diff():
+    fake_network = {"ops": [], "connections": []}
+    with patch("td_mcp.server.bridge") as fake_bridge:
+        fake_bridge.send = AsyncMock(side_effect=[fake_network])
+        from td_mcp.server import td_layout_network
+        result = await td_layout_network(path="/", mode="grid_annotated")
+        assert result["ok"] is True
+        assert result["diff"]["moved"] == []
+
+
+@pytest.mark.asyncio
+async def test_td_layout_network_simple_chain_moves_ops():
+    fake_network = {
+        "ops": [
+            {"path": "/p/a", "op_type": "constantTOP", "family": "TOP", "x": 999, "y": 999, "name": "a"},
+            {"path": "/p/b", "op_type": "blurTOP", "family": "TOP", "x": 999, "y": 999, "name": "b"},
+        ],
+        "connections": [{"src": "/p/a", "dst": "/p/b"}],
+    }
+    with patch("td_mcp.server.bridge") as fake_bridge:
+        fake_bridge.send = AsyncMock(side_effect=[
+            fake_network,
+            {"checkpoint_id": "cp2"},
+            {"ok": True},
+        ])
+        from td_mcp.server import td_layout_network
+        result = await td_layout_network(path="/p", mode="grid")
+        assert result["ok"] is True
+        assert len(result["diff"]["moved"]) == 2
+        assert result["diff"]["checkpoint_id"] == "cp2"
