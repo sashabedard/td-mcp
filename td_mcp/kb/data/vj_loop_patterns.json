@@ -29,6 +29,196 @@
       "glsl_hint": "fbm displacement with low frequency",
       "description_fr": "Déformation lente par noise basse fréquence, palette froide, contemplatif.",
       "tags": ["calm", "organic", "ambient"]
+    },
+    {
+      "pattern_name": "slit_scan_audio",
+      "tempo_bpm_range": [90, 140],
+      "energy": "medium",
+      "palette": ["#ff6600", "#000000", "#ffcc00"],
+      "key_operators": ["cacheTOP", "audioCHOP", "selectCHOP", "compositeTOP"],
+      "glsl_hint": "sample index driven by audio amplitude along Y axis",
+      "description_fr": "Effet slit-scan classique piloté par l'amplitude audio : chaque colonne est échantillonnée à un instant différent selon le signal.",
+      "tags": ["audio_reactive", "temporal", "slit_scan", "cinematic"]
+    },
+    {
+      "pattern_name": "particle_flow_field",
+      "tempo_bpm_range": [80, 120],
+      "energy": "medium",
+      "palette": ["#00ffcc", "#003322", "#ffffff"],
+      "key_operators": ["noiseSOP", "particleSOP", "renderTOP", "cameraCOMP"],
+      "glsl_hint": null,
+      "description_fr": "Milliers de particules suivant un champ vectoriel dérivé de gradients noise, mouvement organique continu.",
+      "tags": ["particles", "organic", "flow", "ambient"]
+    },
+    {
+      "pattern_name": "displaced_geo_audio",
+      "tempo_bpm_range": [100, 140],
+      "energy": "high",
+      "palette": ["#ff0033", "#220011", "#ff99aa"],
+      "key_operators": ["gridSOP", "noiseSOP", "audiofileinCHOP", "analyzeCHOP", "renderTOP"],
+      "glsl_hint": null,
+      "description_fr": "Surface 3D déformée en temps réel par le RMS audio : la géométrie respire et se tord au rythme de la musique.",
+      "tags": ["audio_reactive", "3d", "geometric", "high_energy"]
+    },
+    {
+      "pattern_name": "ascii_shader_loop",
+      "tempo_bpm_range": [90, 130],
+      "energy": "medium",
+      "palette": ["#00ff00", "#001100", "#ffffff"],
+      "key_operators": ["glslTOP", "textTOP", "lookupTOP", "compositeTOP"],
+      "glsl_hint": "luminance-to-ASCII character index lookup in a texture atlas",
+      "description_fr": "Rendu ASCII temps réel via lookup GLSL : chaque pixel source est converti en caractère selon sa luminance, esthétique terminal.",
+      "tags": ["ascii", "retro", "glsl", "text"]
+    },
+    {
+      "pattern_name": "chromatic_grid",
+      "tempo_bpm_range": [100, 135],
+      "energy": "high",
+      "palette": ["#ff0000", "#00ff00", "#0000ff", "#000000"],
+      "key_operators": ["gridSOP", "geometryCOMP", "reorderTOP", "instancingCOMP"],
+      "glsl_hint": "RGB channel offset per instance column for aberration effect",
+      "description_fr": "Grille d'instances colorées avec aberration chromatique par décalage de canaux : rendu techno saturé et vibrant.",
+      "tags": ["geometric", "chromatic_aberration", "instancing", "colorful"]
+    },
+    {
+      "pattern_name": "voronoi_breathing",
+      "tempo_bpm_range": [70, 110],
+      "energy": "medium",
+      "palette": ["#220044", "#9900cc", "#ff66ff"],
+      "key_operators": ["glslTOP", "noiseCHOP", "mathCHOP"],
+      "glsl_hint": "voronoi distance field animated by sin(time) for cell pulsation",
+      "description_fr": "Cellules voronoï pulsant lentement comme un organisme vivant, frontières lumineuses sur fond sombre.",
+      "tags": ["voronoi", "glsl", "organic", "hypnotic"]
+    },
+    {
+      "pattern_name": "sdf_morph",
+      "tempo_bpm_range": [80, 120],
+      "energy": "medium",
+      "palette": ["#ffffff", "#111111", "#00aaff"],
+      "key_operators": ["glslTOP", "noiseCHOP", "blendTOP"],
+      "glsl_hint": "smooth mix between two signed distance functions driven by time",
+      "description_fr": "Morphing fluide entre formes primitives via interpolation de SDF en GLSL, transitions douces et sculpturales.",
+      "tags": ["sdf", "glsl", "morphing", "geometric"]
+    },
+    {
+      "pattern_name": "glitch_databend",
+      "tempo_bpm_range": [120, 180],
+      "energy": "frantic",
+      "palette": ["#ff0000", "#ffffff", "#000000", "#00ffff"],
+      "key_operators": ["reorderTOP", "lookupTOP", "noiseTOP", "compositeTOP"],
+      "glsl_hint": null,
+      "description_fr": "Corruption de données pixel simulant un datamoshing : décalages aléatoires de blocs, artefacts de compression et glitches colorés.",
+      "tags": ["glitch", "corruption", "frantic", "databend"]
+    },
+    {
+      "pattern_name": "feedback_paint",
+      "tempo_bpm_range": [70, 100],
+      "energy": "calm",
+      "palette": ["#ff6644", "#221100", "#ffeecc"],
+      "key_operators": ["feedbackTOP", "transformTOP", "compositeTOP", "blurTOP"],
+      "glsl_hint": null,
+      "description_fr": "Boucle de feedback avec légère translation créant un effet de peinture liquide qui s'accumule et se dissout progressivement.",
+      "tags": ["feedback", "paint", "ambient", "organic"]
+    },
+    {
+      "pattern_name": "point_cloud_orbit",
+      "tempo_bpm_range": [80, 120],
+      "energy": "medium",
+      "palette": ["#aaccff", "#001133", "#ffffff"],
+      "key_operators": ["sopToTOP", "renderTOP", "cameraCOMP", "noiseCHOP"],
+      "glsl_hint": null,
+      "description_fr": "Nuage de points en orbite lente autour d'un centre, caméra animée par courbe sinusoïdale, atmosphère spatiale.",
+      "tags": ["point_cloud", "3d", "ambient", "spatial"]
+    },
+    {
+      "pattern_name": "wireframe_topology",
+      "tempo_bpm_range": [90, 130],
+      "energy": "medium",
+      "palette": ["#00ff88", "#001122", "#ffffff"],
+      "key_operators": ["gridSOP", "noiseSOP", "wireframeMAT", "renderTOP"],
+      "glsl_hint": null,
+      "description_fr": "Topologie wireframe animée par noise : une surface se déforme continuellement en révélant sa structure interne.",
+      "tags": ["wireframe", "3d", "geometric", "topology"]
+    },
+    {
+      "pattern_name": "volumetric_clouds",
+      "tempo_bpm_range": [60, 90],
+      "energy": "calm",
+      "palette": ["#cc99ff", "#220044", "#ffddff"],
+      "key_operators": ["glslTOP", "noiseTOP"],
+      "glsl_hint": "raymarched fbm volumetric density with phase function scattering",
+      "description_fr": "Nuages volumétriques ray-marchés en GLSL avec diffusion atmosphérique, mouvement lent et hypnotique.",
+      "tags": ["volumetric", "glsl", "raymarching", "ambient", "calm"]
+    },
+    {
+      "pattern_name": "liquid_metal",
+      "tempo_bpm_range": [90, 130],
+      "energy": "medium",
+      "palette": ["#aaaaaa", "#333333", "#ffffff", "#ccccff"],
+      "key_operators": ["noiseTOP", "displaceTOP", "envMAT", "renderTOP", "sphereSOP"],
+      "glsl_hint": "high-frequency noise displacement driving environment map reflection lookup",
+      "description_fr": "Surface métallique liquide déformée par noise haute fréquence avec réflexion d'environnement, esthétique mercure organique.",
+      "tags": ["metal", "reflection", "organic", "3d"]
+    },
+    {
+      "pattern_name": "tunnel_zoom",
+      "tempo_bpm_range": [110, 160],
+      "energy": "high",
+      "palette": ["#ff6600", "#000000", "#ffaa00"],
+      "key_operators": ["glslTOP", "noiseTOP"],
+      "glsl_hint": "polar UV coordinates with scroll offset for infinite tunnel illusion",
+      "description_fr": "Tunnel infini généré en GLSL avec coordonnées polaires et défilement continu, sensation de vitesse hypnotique.",
+      "tags": ["tunnel", "glsl", "hypnotic", "infinite", "zoom"]
+    },
+    {
+      "pattern_name": "mandala_symmetry",
+      "tempo_bpm_range": [80, 120],
+      "energy": "medium",
+      "palette": ["#ffcc00", "#cc0044", "#0044cc", "#000000"],
+      "key_operators": ["transformTOP", "compositeTOP", "feedbackTOP", "noiseTOP"],
+      "glsl_hint": null,
+      "description_fr": "Kaleidoscope radial à symétrie multiple : copies rotées et composées pour former un mandala animé contemplatif.",
+      "tags": ["mandala", "symmetry", "kaleidoscope", "geometric", "hypnotic"]
+    },
+    {
+      "pattern_name": "data_moshing",
+      "tempo_bpm_range": [100, 150],
+      "energy": "frantic",
+      "palette": ["#ff0000", "#00ff00", "#0000ff", "#000000"],
+      "key_operators": ["moviefileinTOP", "feedbackTOP", "compositeTOP", "blendTOP"],
+      "glsl_hint": null,
+      "description_fr": "Datamoshing vidéo par mélange d'images avec rémanence de mouvement, artefacts de frames intentionnels et corruption chromatique.",
+      "tags": ["datamosh", "glitch", "video", "frantic", "corruption"]
+    },
+    {
+      "pattern_name": "oscilloscope_lissajous",
+      "tempo_bpm_range": [80, 140],
+      "energy": "medium",
+      "palette": ["#00ff88", "#001111", "#ffffff"],
+      "key_operators": ["lfoCHOP", "mathCHOP", "lineSOP", "renderTOP", "cameraCOMP"],
+      "glsl_hint": null,
+      "description_fr": "Courbe de Lissajous générée par deux LFO en quadrature, tracé oscilloscope vert sur fond noir, variation de fréquence lente.",
+      "tags": ["lissajous", "oscilloscope", "math", "retro", "geometric"]
+    },
+    {
+      "pattern_name": "rgb_pixel_sort",
+      "tempo_bpm_range": [100, 140],
+      "energy": "high",
+      "palette": ["#ff0066", "#6600ff", "#00ffcc", "#000000"],
+      "key_operators": ["glslTOP", "noiseTOP", "compositeTOP"],
+      "glsl_hint": "threshold-based pixel sort along rows with luminance comparator",
+      "description_fr": "Tri de pixels par luminance le long des lignes horizontales créant des traînées colorées caractéristiques du glitch art.",
+      "tags": ["pixel_sort", "glitch", "glsl", "colorful"]
+    },
+    {
+      "pattern_name": "reaction_diffusion",
+      "tempo_bpm_range": [60, 100],
+      "energy": "calm",
+      "palette": ["#ffffff", "#000000", "#8800ff"],
+      "key_operators": ["glslTOP", "feedbackTOP", "levelTOP"],
+      "glsl_hint": "Gray-Scott reaction-diffusion with feed and kill rate parameters",
+      "description_fr": "Simulation de réaction-diffusion de Gray-Scott en feedback GLSL : motifs organiques de taches et labyrinthes émergents.",
+      "tags": ["reaction_diffusion", "simulation", "organic", "emergent", "calm"]
     }
   ]
 }

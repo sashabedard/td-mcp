@@ -46,3 +46,18 @@ async def test_kb_get_vj_loop_reference_empty_query_returns_all_capped():
     result = await kb_get_vj_loop_reference(query="", top_k=3)
     assert result["ok"] is True
     assert len(result["patterns"]) <= 3
+
+
+def test_kb_has_minimum_pattern_count():
+    kb = get_vj_loops_kb()
+    assert len(kb.patterns) >= 20, f"expected >=20 patterns, got {len(kb.patterns)}"
+
+
+def test_all_patterns_have_required_fields():
+    kb = get_vj_loops_kb()
+    for p in kb.patterns:
+        assert p.pattern_name
+        assert p.tempo_bpm_range[0] < p.tempo_bpm_range[1]
+        assert len(p.palette) >= 1
+        assert len(p.key_operators) >= 1
+        assert len(p.description_fr) >= 20
