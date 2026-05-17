@@ -49,30 +49,54 @@ class VJLoopsKB:
     def by_tag(self, tag: str) -> list[VJLoopPattern]:
         return [p for p in self.patterns if tag in p.tags]
 
-    def search(self, query: str, top_k: int = 3) -> list[VJLoopPattern]:
-        """Naive token-overlap scoring on description_fr + tags + name.
-
-        Vector search via the existing kb/vector.py is deferred — this
-        sub-KB is small (<50 patterns), token overlap is good enough
-        until corpus grows.
-        """
+    def search(self, query: str, top_k: int = 3, attach_visuals: bool = True) -> list[VJLoopPattern]:
         tokens = set(re.findall(r"\w+", query.lower()))
         if not tokens:
-            return self.patterns[:top_k]
+            results = self.patterns[:top_k]
+        else:
+            def score(p: VJLoopPattern) -> int:
+                haystack = (
+                    p.description_fr.lower()
+                    + " "
+                    + " ".join(p.tags).lower()
+                    + " "
+                    + p.pattern_name.lower()
+                )
+                haystack_tokens = set(re.findall(r"\w+", haystack))
+                return len(tokens & haystack_tokens)
+            ranked = sorted(self.patterns, key=score, reverse=True)
+            results = [p for p in ranked if score(p) > 0][:top_k]
 
-        def score(p: VJLoopPattern) -> int:
-            haystack = (
-                p.description_fr.lower()
-                + " "
-                + " ".join(p.tags).lower()
-                + " "
-                + p.pattern_name.lower()
-            )
-            haystack_tokens = set(re.findall(r"\w+", haystack))
-            return len(tokens & haystack_tokens)
+        if attach_visuals:
+            results = [self._with_visuals(p) for p in results]
+        return results
 
-        ranked = sorted(self.patterns, key=score, reverse=True)
-        return [p for p in ranked if score(p) > 0][:top_k]
+    def _with_visuals(self, pattern: VJLoopPattern, top_k_refs: int = 3) -> VJLoopPattern:
+        """Attach visual_refs from the corpus matching pattern.energy.
+
+        Stage 2 enhancement could use CLIP text encoder on description_fr
+        for true cross-modal search; stage 1 uses energy tag as a proxy.
+        Silently returns the pattern unchanged if the corpus table is empty
+        or unavailable.
+        """
+        try:
+            from td_mcp.kb.vj_corpus import open_table
+            table = open_table()
+            df = table.to_pandas()
+            if df.empty:
+                return pattern
+            matches = df[df["energy"] == pattern.energy].head(top_k_refs)
+            refs = [
+                VisualRef(
+                    frame_path=row["frame_path"],
+                    artist=row["artist"],
+                    similarity=1.0,
+                )
+                for _, row in matches.iterrows()
+            ]
+            return pattern.model_copy(update={"visual_refs": refs})
+        except Exception:
+            return pattern
 
 
 _kb: VJLoopsKB | None = None

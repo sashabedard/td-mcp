@@ -9,6 +9,7 @@ from mcp.server.fastmcp import FastMCP, Image
 
 from td_mcp import __version__
 from td_mcp.bridge import bridge
+from td_mcp.ingest.vj_loops import ingest_corpus as ingest_vj_corpus
 from td_mcp.kb.cinematic import get_cinematic_kb
 from td_mcp.kb.vj_loops import get_vj_loops_kb
 from td_mcp.kb.glsl import get_glsl_kb
@@ -801,3 +802,24 @@ async def td_layout_network(path: str = "/", mode: str = "grid_annotated") -> di
         checkpoint_id=checkpoint_id,
     )
     return {"ok": True, "diff": diff.model_dump()}
+
+
+@mcp.tool()
+async def kb_ingest_vj_corpus(url_list_path: str) -> dict:
+    """Run the VJ loops ingestion pipeline against a JSON URL list.
+
+    Long-running (downloads videos, extracts frames, embeds with CLIP,
+    classifies with Haiku). Designed to be resumable: a cache file next
+    to the URL list (`<name>.cache.json`) stores Haiku results keyed by
+    frame hash so re-runs skip already-classified frames.
+    """
+    from pathlib import Path
+    p = Path(url_list_path)
+    if not p.exists():
+        return {"ok": False, "error": f"url list not found: {url_list_path}"}
+    cache_path = p.with_suffix(".cache.json")
+    try:
+        report = ingest_vj_corpus(p, cache_path=cache_path)
+        return {"ok": True, "report": report}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
