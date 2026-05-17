@@ -142,16 +142,37 @@ def _dispatch(action, data):
         }
 
     elif action == 'get_network':
-        parent_path = data.get('parent', '/project1')
+        # Accept either 'path' (layout orchestrator) or 'parent' (legacy) key.
+        parent_path = data.get('path') or data.get('parent', '/project1')
         parent_op = op(parent_path)
         if not parent_op:
             raise Exception(f'Parent not found: {parent_path}')
-        operators = [
-            {'path': child.path, 'name': child.name, 'type': child.type,
-             'x': child.nodeX, 'y': child.nodeY}
-            for child in parent_op.children
-        ]
-        return {'parent': parent_path, 'operators': operators, 'count': len(operators)}
+        children = parent_op.children if hasattr(parent_op, 'children') else []
+        # Build ops list with op_type + family for layout orchestrator.
+        ops_out = []
+        for c in children:
+            ops_out.append({
+                'path': c.path,
+                'name': c.name,
+                'op_type': c.type,
+                'family': _family_of(c),
+                'x': int(c.nodeX),
+                'y': int(c.nodeY),
+            })
+        conns = []
+        for c in children:
+            for i, inp in enumerate(c.inputs):
+                if inp is not None:
+                    conns.append({'src': inp.path, 'dst': c.path, 'in_index': i})
+        # Keep legacy 'operators' key for backward compat.
+        return {
+            'ok': True,
+            'parent': parent_path,
+            'ops': ops_out,
+            'connections': conns,
+            'operators': ops_out,
+            'count': len(ops_out),
+        }
 
     elif action == 'set_param':
         path = data.get('path', '')
@@ -202,16 +223,35 @@ def _dispatch(action, data):
         return {'folder': project.folder}
 
     elif action == 'checkpoint':
-        comp_path = data['comp_path']
-        file_path = data['file_path']
-        target = op(comp_path)
-        if not target:
-            raise Exception(f'Operator not found: {comp_path}')
-        if not target.isCOMP:
-            raise Exception(f'Checkpoint target must be a COMP: {comp_path} is {target.type}')
-        # comp.save() exports a .tox of just this COMP (children + params)
-        target.save(file_path)
-        return {'comp_path': comp_path, 'file_path': file_path}
+        # Two calling conventions:
+        #   (a) label-based whole-project snapshot (layout orchestrator):
+        #       data = {"label": "pre-layout /project1"}
+        #       Returns {"ok": True, "checkpoint_id": "<hex12>", "path": "...", "label": "..."}
+        #   (b) comp-scoped .tox export (td_checkpoint MCP tool):
+        #       data = {"comp_path": "/project1/mycomp", "file_path": "/tmp/..."}
+        #       Returns {"comp_path": ..., "file_path": ...}
+        if 'label' in data and 'comp_path' not in data:
+            # Label-based whole-project checkpoint.
+            import uuid, os
+            label = data.get('label', 'checkpoint')
+            cid = uuid.uuid4().hex[:12]
+            folder = '/tmp/td_mcp_checkpoints'
+            os.makedirs(folder, exist_ok=True)
+            out_path = f'{folder}/{cid}.toe'
+            project.save(out_path)
+            return {'ok': True, 'checkpoint_id': cid, 'path': out_path, 'label': label}
+        else:
+            # Comp-scoped .tox export.
+            comp_path = data['comp_path']
+            file_path = data['file_path']
+            target = op(comp_path)
+            if not target:
+                raise Exception(f'Operator not found: {comp_path}')
+            if not target.isCOMP:
+                raise Exception(f'Checkpoint target must be a COMP: {comp_path} is {target.type}')
+            # comp.save() exports a .tox of just this COMP (children + params)
+            target.save(file_path)
+            return {'comp_path': comp_path, 'file_path': file_path}
 
     elif action == 'rollback':
         comp_path = data['comp_path']
@@ -235,8 +275,63 @@ def _dispatch(action, data):
         restored.nodeY = y
         return {'restored_path': restored.path, 'file_path': file_path}
 
+    elif action == 'apply_layout':
+        # Apply computed layout: move ops, rename ops, add annotate COMPs.
+        # Called by td_layout_network in server.py.
+        path = data.get('path', '/project1')
+        moves = data.get('moves', [])
+        renames = data.get('renames', [])
+        annotations = data.get('annotations', [])
+
+        for m in moves:
+            target = op(m['path'])
+            if target is None:
+                continue
+            target.nodeX = m['x']
+            target.nodeY = m['y']
+
+        for r in renames:
+            target = op(r['old_path'])
+            if target is None:
+                continue
+            new_name = r['new_path'].rsplit('/', 1)[-1]
+            target.name = new_name
+
+        for a in annotations:
+            member_paths = a.get('member_paths', [])
+            parent_path_ann = member_paths[0].rsplit('/', 1)[0] if member_paths else path
+            parent_op_ann = op(parent_path_ann)
+            if parent_op_ann is None:
+                continue
+            safe_name = f"ann_{a['cluster_name'].replace(' ', '_')}"
+            ann = parent_op_ann.create(annotateCOMP, safe_name)
+            if ann is not None:
+                ann.par.title = a['cluster_name']
+                ann.nodeX = a['bbox_x']
+                ann.nodeY = a['bbox_y']
+                ann.nodeWidth = a['bbox_w']
+                ann.nodeHeight = a['bbox_h']
+
+        return {
+            'ok': True,
+            'applied': {
+                'moves': len(moves),
+                'renames': len(renames),
+                'annotations': len(annotations),
+            },
+        }
+
     else:
         raise Exception(f'Unknown action: {action}')
+
+
+def _family_of(o):
+    """Return the operator family string for a TD operator."""
+    name = type(o).__name__
+    for fam in ('CHOP', 'TOP', 'SOP', 'DAT', 'COMP', 'MAT', 'POP'):
+        if name.endswith(fam):
+            return fam
+    return 'COMP'
 
 
 def onWebSocketOpen(webServerDAT, client, data):
