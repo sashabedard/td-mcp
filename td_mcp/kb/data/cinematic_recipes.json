@@ -1,0 +1,20 @@
+{
+  "recipes": [
+    {
+      "look": "dof_shallow",
+      "operator_chain": [
+        {"op_type": "cameraCOMP", "role": "camera", "notes": "focalDistance drives focus plane"},
+        {"op_type": "renderTOP", "role": "render", "notes": "enable Depth Buffer output"}
+      ],
+      "param_values": {
+        "cameraCOMP": {"focallength": 50.0, "focaldist": 4.0, "fstop": 1.4},
+        "renderTOP": {"depth": true}
+      },
+      "common_pitfalls": [
+        "focaldist must be in scene units, not pixels",
+        "fstop below 1.0 produces unrealistic bokeh"
+      ],
+      "example_screenshot_url": null
+    }
+  ]
+}
