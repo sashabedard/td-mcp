@@ -8,6 +8,17 @@ version: 0.1.0
 
 Your training data on TouchDesigner is outdated and frequently wrong about operator class names, parameter internals, the Python `td` module, and GLSL TOP conventions. POPs (released TD 2025) have near-zero coverage in your training. The td-mcp server provides typed, KB-validated tools that mechanically catch hallucinations — use them instead of guessing.
 
+## Mandatory: plan from the KB before building — and stay critical
+
+For any creative or technical build request, NO operator gets created before this sequence:
+
+1. **Decompose the request into 2-6 named techniques.** One diluted kb_search over the whole request returns noise; per-technique searches hit (validated repeatedly). If the user names an artist or channel (Okamirufu, elekktronaut, paketa12...), search those exact terms — the vision corpus is indexed by channel and the KB knows *their* actual node vocabulary.
+2. **Search the KB for EACH technique**: `kb_search` (with source/family filters), `kb_pop_pattern`, `kb_get_cinematic_recipe`, `kb_get_vj_loop_reference`. Note which chunk grounds which part.
+3. **State the plan before the first td_create_op**: per stage — the op chain, the KB source that grounds it, and its confidence tier: curated pattern > vision chunk (timestamped, shows real wiring) > wiki > transcript > improvisation. Any stage resting on improvisation gets flagged as such to the user BEFORE building, not discovered after.
+4. **Attack your own plan before executing it**: which stage is most likely to fail visually? Does each stage's output actually feed what the next needs (family, resolution, attribute names)? Fix the plan, not the wreckage.
+5. **Escape hatches must be justified against the KB, in writing.** About to reach for a GLSL TOP/POP, a run_script, or an image/video input? Search the KB for the node-native equivalent FIRST and cite why it cannot work. "Cleanest / most controllable / simplest" is not a justification — it is the rationalization that precedes every KB bypass. When the user asked for procedural, file inputs are forbidden, period.
+6. **Execute stage by stage, snapshot per stage.** Deviating from the plan is allowed — silently drifting is not: say what changed and why.
+
 ## Mandatory protocol before writing any TD code or proposing any operator
 
 1. **Connect** if not already: call `mcp__td-mcp__td_connect` (default `ws://127.0.0.1:9988`).
@@ -40,7 +51,7 @@ A network the user cannot read is a network the user cannot maintain. After the 
 
 - Never write `op('X').par.Y = Z` from memory. Read the param via `td_op_info` first to confirm its name and current value.
 - Never invent an op class name. If unsure, `kb_get_operator query="<your guess>"` and read the suggestions.
-- **Nodes first, GLSL last.** Writing a shader to avoid wiring operators is an anti-pattern: node networks are what the KB validates, what the user can read and tweak in the editor, and what POPs/TOPs already run on the GPU. Reach for a GLSL TOP only when the effect is genuinely shader-shaped (raymarching, custom per-pixel math with no operator equivalent) or a measured perf wall demands it — and say so explicitly before writing it. If a kb_search for the technique returns a node recipe, build the nodes.
+- **Nodes first, GLSL last.** Writing a shader to avoid wiring operators is an anti-pattern: node networks are what the KB validates, what the user can read and tweak in the editor, and what POPs/TOPs already run on the GPU. Reach for GLSL (TOP **or** POP) only when the effect is genuinely shader-shaped (raymarching, custom per-pixel math with no operator equivalent) or a measured perf wall demands it — and say so explicitly before writing it. If a kb_search for the technique returns a node recipe, build the nodes.
 - For GLSL TOPs (when justified): always start from `mcp__td-mcp__kb_glsl_template` — never write the boilerplate yourself. The `TDOutputSwizzle`, `sTD2DInputs`, `uTDOutputInfo` conventions trip up every freshly-written shader. After pointing `pixeldat` at your Text DAT, read the glslTOP's compile status (`td_op_info` warnings/errors or `op.errors()` via td_expr) — a shader that silently outputs black is the GLSL equivalent of the unvalidated build.
 - After mutating something visual, take a snapshot: `td_snapshot <top_path>` returns an Image you can actually see. Close the loop visually.
 - The TD `app.version` returns "099" (legacy field); the real build is in `app.build` (e.g. "2025.32820"). Don't be confused.
