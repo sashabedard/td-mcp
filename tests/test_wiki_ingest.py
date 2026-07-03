@@ -120,3 +120,13 @@ def test_normalize_strips_filesystem_hostile_chars():
     assert _normalize("Palette/Mapping") == "palettemapping"
     assert _normalize("Category:CHOPs") == "categorychops"
     assert "/" not in _normalize("a/b/c")
+
+
+def test_split_text_hard_caps_giant_paragraphs():
+    """Un tableau wiki rendu comme un seul bloc sans \\n\\n ne doit jamais
+    produire un chunk au-delà du budget (crash MPS 32GiB observé)."""
+    from td_mcp.ingest.wiki import split_text
+    giant = "cell " * 5000  # 5000 mots, zéro frontière de paragraphe
+    pieces = split_text(giant.strip(), max_words=700)
+    assert all(len(p.split()) <= 700 * 1.35 for p in pieces)
+    assert sum(len(p.split()) for p in pieces) == 5000

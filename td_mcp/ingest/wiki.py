@@ -287,6 +287,18 @@ def split_text(text: str, max_words: int = 700) -> list[str]:
     if words_total <= int(max_words * 1.3):
         return [text]
     paras = [p for p in text.split("\n\n") if p.strip()]
+    # hard-split monster "paragraphs" (trafilatura renders wiki tables as one
+    # giant block): unbounded chunks push BGE-M3 to its 8K-token ceiling and
+    # the MPS attention buffer explodes (observed: 32 GiB allocation crash)
+    bounded: list[str] = []
+    for p in paras:
+        words = p.split()
+        if len(words) <= int(max_words * 1.3):
+            bounded.append(p)
+        else:
+            for i in range(0, len(words), max_words):
+                bounded.append(" ".join(words[i:i + max_words]))
+    paras = bounded
     chunks: list[str] = []
     current: list[str] = []
     count = 0

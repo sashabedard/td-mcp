@@ -199,11 +199,16 @@ class VectorKB:
 
         pending = to_add + to_update
         if pending:
-            vectors = self._embed([c.embed_text() for c in pending])
             if to_update:
                 ids = ",".join(f"'{c.id}'" for c in to_update)
                 table.delete(f"id IN ({ids})")
-            table.add([c.to_record(v) for c, v in zip(pending, vectors)])
+            # embed+add in slices: bounded memory, and a crash mid-run keeps
+            # every completed slice (the next upsert resumes on the rest)
+            slice_size = 256
+            for i in range(0, len(pending), slice_size):
+                batch = pending[i:i + slice_size]
+                vectors = self._embed([c.embed_text() for c in batch])
+                table.add([c.to_record(v) for c, v in zip(batch, vectors)])
 
         return {
             "added": len(to_add),
