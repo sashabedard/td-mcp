@@ -151,10 +151,13 @@ def _dispatch(action, data):
         # Build ops list with op_type + family for layout orchestrator.
         ops_out = []
         for c in children:
+            # OPType = python class name (cameraCOMP, renderTOP) — the canonical
+            # vocabulary shared with the operators catalog and cluster detection.
+            # c.type is the short name (cam, render) and matches nothing.
             ops_out.append({
                 'path': c.path,
                 'name': c.name,
-                'op_type': c.type,
+                'op_type': getattr(c, 'OPType', c.type),
                 'family': _family_of(c),
                 'x': int(c.nodeX),
                 'y': int(c.nodeY),
@@ -304,9 +307,17 @@ def _dispatch(action, data):
             if parent_op_ann is None:
                 continue
             safe_name = f"ann_{a['cluster_name'].replace(' ', '_')}"
-            ann = parent_op_ann.create(annotateCOMP, safe_name)
+            existing = parent_op_ann.op(safe_name)
+            ann = existing if existing is not None else parent_op_ann.create(annotateCOMP, safe_name)
             if ann is not None:
-                ann.par.title = a['cluster_name']
+                # TD may ignore the requested name on create — enforce it so
+                # re-running layout updates this annotate instead of stacking
+                # annotate1, annotate2, ... duplicates.
+                if ann.name != safe_name:
+                    ann.name = safe_name
+                # annotateCOMP label lives in the custom par 'Titletext'
+                # (capitalized) — there is no builtin 'title' par.
+                ann.par.Titletext = a['cluster_name']
                 ann.nodeX = a['bbox_x']
                 ann.nodeY = a['bbox_y']
                 ann.nodeWidth = a['bbox_w']

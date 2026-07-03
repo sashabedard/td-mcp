@@ -102,3 +102,27 @@ async def test_td_layout_network_simple_chain_moves_ops():
         assert result["ok"] is True
         assert len(result["diff"]["moved"]) == 2
         assert result["diff"]["checkpoint_id"] == "cp2"
+
+
+def test_detect_clusters_audio_chain_multihop():
+    """Real audio chains have several hops between input and analysis —
+    the BFS must collect the whole downstream CHOP subgraph."""
+    from td_mcp.tools.layout import detect_clusters
+
+    ops = [
+        {"path": "/b/audioin", "op_type": "audiodeviceinCHOP"},
+        {"path": "/b/sel", "op_type": "selectCHOP"},
+        {"path": "/b/spec", "op_type": "audiospectrumCHOP"},
+        {"path": "/b/energy", "op_type": "analyzeCHOP"},
+        {"path": "/b/kick", "op_type": "nullCHOP"},
+        {"path": "/b/tex", "op_type": "noiseTOP"},  # non-CHOP: excluded
+    ]
+    edges = [
+        ("/b/audioin", "/b/sel"), ("/b/sel", "/b/spec"),
+        ("/b/spec", "/b/energy"), ("/b/energy", "/b/kick"),
+        ("/b/kick", "/b/tex"),
+    ]
+    clusters = detect_clusters(ops, edges)
+    audio = [c for c in clusters if c["name"] == "Audio reactive"]
+    assert len(audio) == 1
+    assert set(audio[0]["members"]) == {"/b/audioin", "/b/sel", "/b/spec", "/b/energy", "/b/kick"}

@@ -86,23 +86,33 @@ def detect_clusters(
     """Heuristic cluster detection. Each cluster: {name, members: [paths]}.
 
     Heuristics:
-    - "Audio reactive": audiofileinCHOP + analyzeCHOP connected
+    - "Audio reactive": an audio-input CHOP plus every downstream CHOP
+      reachable from it (BFS over edges) — real audio chains have several
+      hops between input and analysis, a direct-edge test never fires
     - "Render chain": cameraCOMP + geometryCOMP + renderTOP all present
     - "Feedback loop": any feedbackTOP
     """
     clusters: list[dict] = []
 
-    audiofile = _has_type(ops_meta, "audiofileinCHOP")
-    analyze = _has_type(ops_meta, "analyzeCHOP")
-    if audiofile and analyze:
-        edge_set = set(edges)
-        for a in audiofile:
-            for z in analyze:
-                if (a["path"], z["path"]) in edge_set:
-                    clusters.append({
-                        "name": "Audio reactive",
-                        "members": [a["path"], z["path"]],
-                    })
+    audio_ins = _has_type(ops_meta, "audiofileinCHOP") + _has_type(ops_meta, "audiodeviceinCHOP")
+    if audio_ins:
+        chop_paths = {o["path"] for o in ops_meta if o["op_type"].endswith("CHOP")}
+        downstream: dict[str, list[str]] = {}
+        for src, dst in edges:
+            downstream.setdefault(src, []).append(dst)
+        for a in audio_ins:
+            members = [a["path"]]
+            queue = [a["path"]]
+            seen = {a["path"]}
+            while queue:
+                cur = queue.pop(0)
+                for nxt in downstream.get(cur, []):
+                    if nxt not in seen and nxt in chop_paths:
+                        seen.add(nxt)
+                        members.append(nxt)
+                        queue.append(nxt)
+            if len(members) >= 2:
+                clusters.append({"name": "Audio reactive", "members": members})
 
     cams = _has_type(ops_meta, "cameraCOMP")
     geos = _has_type(ops_meta, "geometryCOMP")

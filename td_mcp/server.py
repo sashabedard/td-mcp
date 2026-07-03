@@ -321,11 +321,12 @@ async def td_list_checkpoints() -> dict:
 
 
 @mcp.tool()
-async def kb_list_operators(family: str | None = None, limit: int = 50) -> dict:
+async def kb_list_operators(family: str | None = None, limit: int = 50, offset: int = 0) -> dict:
     """List operators known to the catalog, optionally filtered by family.
 
     family ∈ {CHOP, TOP, SOP, POP, DAT, COMP, MAT}. limit caps the response
-    size; full counts are always reported in `total` and `total_in_family`.
+    size, offset paginates (next page: offset += returned); full counts are
+    always reported in `total` and `total_in_family`.
     """
     catalog = get_catalog()
     if catalog.is_empty:
@@ -334,15 +335,17 @@ async def kb_list_operators(family: str | None = None, limit: int = 50) -> dict:
             "error": "Catalog is empty. Run kb_refresh_operators_catalog with TD connected.",
         }
     entries = catalog.list(family) if family else catalog.list()
-    truncated = entries[:limit]
+    page = entries[offset:offset + limit]
     return {
         "ok": True,
         "total": catalog.count,
         "by_family": catalog.family_counts(),
         "filter_family": family,
         "total_in_family": len(entries),
-        "returned": len(truncated),
-        "operators": [{"python_class": e.python_class, "family": e.family} for e in truncated],
+        "offset": offset,
+        "returned": len(page),
+        "has_more": offset + len(page) < len(entries),
+        "operators": [{"python_class": e.python_class, "family": e.family} for e in page],
     }
 
 
@@ -540,6 +543,43 @@ async def kb_reindex() -> dict:
 
 
 @mcp.tool()
+async def kb_index_update() -> dict:
+    """Incrementally fold new/changed chunks into the vector index (upsert).
+    Embeds ONLY what changed — seconds instead of the ~15 min full reindex.
+    Use after any ingestion (wiki, youtube, vision) instead of kb_reindex;
+    kb_reindex remains for full rebuilds (model change, corrupted index).
+    """
+    kb = get_vector_kb()
+    chunks = build_seed_chunks()
+    if not chunks:
+        return {"ok": False, "error": "No chunks to index — KBs appear empty."}
+    return {"ok": True, **kb.upsert(chunks)}
+
+
+@mcp.tool()
+async def kb_ingest_wiki_full(limit: int = 300) -> dict:
+    """Fetch the COMPLETE docs.derivative.ca wiki (~2100 articles: operators,
+    Python classes, concepts, guides) into the local cache — not just the
+    operator pages. Polite (1 req/sec): `limit` bounds NEW fetches per call
+    (default 300 ≈ 5 min); already-cached pages are free. Re-run until
+    `remaining` hits 0, then call kb_index_update.
+    """
+    from td_mcp.ingest.wiki import WikiClient, ingest_all_pages
+
+    with WikiClient() as client:
+        report = ingest_all_pages(client, limit=limit)
+    return {
+        "ok": True,
+        **report,
+        "next_step": (
+            "Re-run until remaining=0, then kb_index_update to fold chunks in."
+            if report.get("remaining", 0) > 0
+            else "Call kb_index_update to fold the wiki chunks into the index."
+        ),
+    }
+
+
+@mcp.tool()
 async def kb_vector_status() -> dict:
     """Report on the vector index: location, model, row count, whether built."""
     kb = get_vector_kb()
@@ -653,6 +693,89 @@ async def kb_ingest_youtube_channel(
         "processed": processed,
         "cache": manifest(),
         "next_step": "Call kb_reindex to fold tutorial chunks into the vector store.",
+    }
+
+
+@mcp.tool()
+async def kb_ingest_tutorial_vision(
+    handle: str | None = None,
+    video_id: str | None = None,
+    limit: int = 1,
+    model: str | None = None,
+) -> dict:
+    """Vision pass over already-transcribed tutorials: watch the video,
+    not just the transcript. Downloads video (≤1080p), scene-detects
+    keyframes, sends each segment (frames + aligned transcript) to a
+    vision model (default claude-sonnet-5), and caches structured
+    technique extractions (operators, parameters, wiring) per video.
+
+    Requires ANTHROPIC_API_KEY and the [vision] extra (pip install
+    anthropic). Operates ONLY on videos already in the youtube cache
+    with a transcript — run kb_ingest_youtube_channel first.
+
+    `video_id` targets one video; otherwise processes up to `limit`
+    transcribed videos (of `handle`, or any channel). Resumable:
+    segments already extracted are skipped, errored ones retried.
+
+    Does NOT reindex — call kb_reindex afterward.
+    """
+    import json as _json
+    import os as _os
+
+    from td_mcp.ingest.tutorial_vision import (
+        DEFAULT_VISION_MODEL,
+        manifest as vision_manifest,
+        process_video,
+    )
+    from td_mcp.ingest.youtube import DEFAULT_CACHE_DIR, VideoMeta
+
+    try:
+        import anthropic  # noqa: F401
+    except ImportError:
+        return {"ok": False, "error": "anthropic package not installed — pip install 'td-mcp[vision]'"}
+    if not _os.environ.get("ANTHROPIC_API_KEY"):
+        return {"ok": False, "error": "ANTHROPIC_API_KEY not set"}
+
+    candidates: list[tuple[VideoMeta, str]] = []
+    if DEFAULT_CACHE_DIR.exists():
+        for channel_dir in sorted(DEFAULT_CACHE_DIR.iterdir()):
+            if not channel_dir.is_dir():
+                continue
+            if handle and channel_dir.name != handle.lstrip("@"):
+                continue
+            for video_dir in sorted(channel_dir.iterdir()):
+                meta_path = video_dir / "meta.json"
+                if not meta_path.exists() or not (video_dir / "transcript.json").exists():
+                    continue
+                meta = VideoMeta.from_dict(_json.loads(meta_path.read_text()))
+                if video_id and meta.video_id != video_id:
+                    continue
+                candidates.append((meta, channel_dir.name))
+
+    if not candidates:
+        return {
+            "ok": False,
+            "error": "No transcribed videos matching the filters in the cache.",
+            "hint": "Run kb_ingest_youtube_channel first.",
+        }
+
+    use_model = model or DEFAULT_VISION_MODEL
+    reports = []
+    processed = 0
+    for meta, chan in candidates:
+        if not video_id and processed >= max(1, limit):
+            break
+        report = process_video(meta, chan, model=use_model)
+        reports.append({"video_id": meta.video_id, "title": meta.title, **report})
+        if report.get("ok"):
+            processed += 1
+
+    return {
+        "ok": True,
+        "model": use_model,
+        "reports": reports,
+        "cache": vision_manifest(),
+        "next_step": "Call kb_reindex to fold vision chunks into the vector store.",
     }
 
 
