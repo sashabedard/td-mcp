@@ -91,3 +91,10 @@ def get_pop_kb() -> POPPatternsKB:
     if _kb is None:
         _kb = POPPatternsKB.load()
     return _kb
+
+
+def reset_pop_kb_singleton() -> None:
+    """Drop the cached singleton so the next get_pop_kb() re-reads the JSON
+    (needed after kb_promote_pop_pattern appends a pattern at runtime)."""
+    global _kb
+    _kb = None
