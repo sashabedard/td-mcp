@@ -78,9 +78,70 @@ async def td_connect(
     """
     try:
         await bridge.connect(url, token=token, timeout=timeout)
-        return {"ok": True, "url": url, "connected": True}
+        sync = await _sync_bridge_script()
+        return {"ok": True, "url": url, "connected": True, "bridge_sync": sync}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+
+def _bridge_script() -> tuple[str, str, str] | None:
+    """(text, sha256, path) of the repo's bridge script, or None outside a
+    source checkout (wheel installs don't ship td_bridge_tox/)."""
+    import hashlib
+    from pathlib import Path
+
+    path = Path(__file__).parent.parent / "td_bridge_tox" / "webserver_callbacks.py"
+    if not path.exists():
+        return None
+    text = path.read_text(encoding="utf-8")
+    return text, hashlib.sha256(text.strip().encode("utf-8")).hexdigest(), str(path)
+
+
+async def _sync_bridge_script() -> dict:
+    """Detect and repair bridge-script drift right after connecting.
+
+    A TD project reload silently reverts the callbacks DAT to its saved
+    version — every symptom downstream (missing actions, legacy payload
+    shapes) looks like a plain bug. Compare hashes and, on drift, have TD
+    reload the DAT text from the repo file (same machine by design —
+    localhost trust model). run_script is used for the repair so it also
+    works on old bridges that don't know the bridge_version action.
+    """
+    local = _bridge_script()
+    if local is None:
+        return {"status": "skipped", "reason": "bridge script not found (wheel install?)"}
+    _text, local_hash, script_path = local
+
+    try:
+        remote = await _call("bridge_version")
+        if remote.get("script_hash") == local_hash:
+            return {"status": "synced"}
+    except Exception:
+        pass  # old bridge without the action — repair below
+
+    repair = (
+        "from pathlib import Path\n"
+        "_updated = []\n"
+        "for _ws in root.findChildren(type=webserverDAT, maxDepth=10):\n"
+        "    _cb = _ws.par.callbacks.eval()\n"
+        "    if _cb and 'def onWebSocketReceiveText' in _cb.text:\n"
+        f"        Path('/tmp/td_mcp_bridge_backup.py').write_text(_cb.text)\n"
+        f"        _cb.text = Path({script_path!r}).read_text(encoding='utf-8')\n"
+        "        _updated.append(_cb.path)\n"
+        "print(','.join(_updated))\n"
+    )
+    try:
+        result = await _call("run_script", code=repair)
+        updated = (result.get("output") or "").strip()
+        if not updated:
+            return {"status": "failed", "reason": "no callbacks DAT found to update"}
+        verify = await _call("bridge_version")
+        if verify.get("script_hash") == local_hash:
+            return {"status": "updated", "dat": updated,
+                    "backup": "/tmp/td_mcp_bridge_backup.py"}
+        return {"status": "failed", "reason": "hash mismatch after update"}
+    except Exception as e:
+        return {"status": "failed", "reason": str(e)}
 
 
 @mcp.tool()
@@ -577,6 +638,109 @@ async def kb_ingest_wiki_full(limit: int = 300) -> dict:
             else "Call kb_index_update to fold the wiki chunks into the index."
         ),
     }
+
+
+@mcp.tool()
+async def td_compile_technique(
+    video_id: str,
+    segment_index: int,
+    parent: str = "/project1",
+) -> dict:
+    """Build a vision-extracted technique (techniques.json segment) in the
+    live TD project — the curation loop, industrialized. Creates a wrapper
+    baseCOMP `compile_<video>_<seg>`, instantiates the catalog-validated
+    operators, applies parameters by label matching, wires connections, and
+    reads back the params TD actually holds ("verified_ops").
+
+    Everything unmatched/unresolved is REPORTED, never guessed. After a
+    visual check (td_snapshot on a TOP, or wire the POP chain into a geo),
+    promote the verified result with kb_promote_pop_pattern.
+    """
+    import json as _json
+
+    from td_mcp.ingest.youtube import DEFAULT_CACHE_DIR
+    from td_mcp.tools.technique_compiler import build_plan, compile_script
+
+    tech_path = None
+    for channel_dir in DEFAULT_CACHE_DIR.iterdir() if DEFAULT_CACHE_DIR.exists() else []:
+        cand = channel_dir / video_id / "techniques.json"
+        if cand.exists():
+            tech_path = cand
+            break
+    if tech_path is None:
+        return {"ok": False, "error": f"no techniques.json for video {video_id!r} in cache"}
+
+    seg = _json.loads(tech_path.read_text()).get("segments", {}).get(str(segment_index))
+    if seg is None or seg.get("status") != "ok":
+        return {"ok": False, "error": f"segment {segment_index} missing or not status=ok"}
+    extraction = seg.get("extraction", {})
+
+    catalog = get_catalog()
+    catalog_classes = {e.python_class for e in catalog.list()}
+    plan = build_plan(extraction, catalog_classes)
+    if not plan.creates:
+        return {"ok": False, "error": "no catalog-validated operators in this segment",
+                "unresolved": plan.unresolved_instances}
+
+    comp_name = f"compile_{video_id.replace('-', '_')}_{segment_index:02d}"
+    script = compile_script(plan, parent, comp_name)
+    result = await _call("run_script", code=script)
+    try:
+        report = _json.loads(result.get("output", "").strip().splitlines()[-1])
+    except Exception:
+        return {"ok": False, "error": "could not parse build report", "raw": result}
+
+    return {
+        "ok": True,
+        "comp_path": f"{parent}/{comp_name}",
+        "technique": extraction.get("technique", ""),
+        "source_segment": {"video_id": video_id, "segment": segment_index,
+                           "start": seg.get("start"), "end": seg.get("end")},
+        "plan": {
+            "unresolved_instances": plan.unresolved_instances,
+            "dropped_connections": plan.dropped_connections,
+        },
+        **report,
+        "next_step": "Inspect visually (td_snapshot), then kb_promote_pop_pattern "
+                     "with the verified_ops params if the technique holds.",
+    }
+
+
+@mcp.tool()
+async def kb_promote_pop_pattern(pattern: dict) -> dict:
+    """Append a validated pattern to the curated POP patterns KB.
+
+    The pattern dict must satisfy the POPPattern schema (id, name,
+    description, ops[{name, op_type, params}], connections[{out, into}],
+    notes, pitfalls, references, verified_on_build). All op_types must
+    exist in the operators catalog and at least one must be a POP. Ids are
+    unique — promotion of an existing id is rejected, edit the JSON
+    directly for revisions.
+    """
+    import json as _json
+
+    from td_mcp.kb.pop_patterns import _DATA_PATH, POPPattern, get_pop_kb, reset_pop_kb_singleton
+
+    try:
+        validated = POPPattern.model_validate(pattern)
+    except Exception as e:
+        return {"ok": False, "error": f"schema validation failed: {e}"}
+
+    catalog_classes = {e.python_class for e in get_catalog().list()}
+    unknown = [o.op_type for o in validated.ops if o.op_type not in catalog_classes]
+    if unknown:
+        return {"ok": False, "error": f"op_types not in catalog: {unknown}"}
+    if not any(o.op_type.endswith("POP") for o in validated.ops):
+        return {"ok": False, "error": "no POP operator — this KB curates POP workflows"}
+    if get_pop_kb().get(validated.id) is not None:
+        return {"ok": False, "error": f"pattern id {validated.id!r} already exists"}
+
+    data = _json.loads(_DATA_PATH.read_text())
+    data["patterns"].append(validated.model_dump())
+    _DATA_PATH.write_text(_json.dumps(data, indent=2, ensure_ascii=False))
+    reset_pop_kb_singleton()
+    return {"ok": True, "id": validated.id, "total_patterns": len(data["patterns"]),
+            "next_step": "kb_index_update to fold the new pattern chunk into the index."}
 
 
 @mcp.tool()

@@ -48,6 +48,13 @@ def _send(webServerDAT, client, msg_id, ok, result=None, error=None, tb=None):
 
 
 def _dispatch(action, data):
+    if action == 'bridge_version':
+        # Hash of this very script — lets the MCP server detect drift between
+        # the repo's bridge script and what TD actually loaded (a project
+        # reload silently reverts the DAT to the last-saved version).
+        import hashlib
+        return {'script_hash': hashlib.sha256(me.text.strip().encode('utf-8')).hexdigest()}
+
     if action == 'get_status':
         # /perform.par.rate is the project's actual render rate. The original
         # code used .fpsop which doesn't exist, silently falling back to 0.
