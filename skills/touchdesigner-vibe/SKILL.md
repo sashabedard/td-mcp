@@ -24,7 +24,7 @@ param_values from the recipe.
 ## Protocol
 
 1. **Identify the technique** from the reference in 1-2 sentences: "this looks like X feedback loop + Y noise displacement" or "this is a procedural fractal in a GLSL TOP". State your guess explicitly so the user can redirect immediately if you've misread.
-2. **Wrap your experiment in a baseCOMP** so you can checkpoint cleanly: `mcp__td-mcp__td_create_op op_type="baseCOMP" name="vibe_<n>" parent="/project1"`. Work inside `/project1/vibe_<n>`.
+2. **Wrap your experiment in a baseCOMP** so you can checkpoint cleanly: `mcp__td-mcp__td_create_op op_type="baseCOMP" name="vibe_<n>" parent="/project1"`. Work inside `/project1/vibe_<n>` — with its OWN small render (≤640px) and iteration-grade quality (no IBL prefilter, small blurs). A heavy graph starves the bridge and kills the loop's speed; final resolution and expensive lighting come after the look is validated, at composition time.
 3. **Checkpoint before each non-trivial attempt**: `td_checkpoint /project1/vibe_<n> "<short description of what you're about to try>"`. Cheap insurance.
 4. **Iterate in short cycles**:
    - Mutate (create op / set param / change wire)

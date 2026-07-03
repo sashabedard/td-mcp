@@ -38,6 +38,32 @@ A build is NOT done when the last operator is wired — it is done when a snapsh
 
 Building 36 correct operators with one bad camera transform produces a black screen and reads as total failure to the user. The visual loop is what separates "wired" from "working".
 
+## Cook budget protocol — protect the bridge, iterate in isolation
+
+TD's WebServer DAT shares the main cook thread: a graph that cooks heavy
+starves the bridge until every call times out, and only the USER's hands can
+free it (pause timeline, kill the heavy node). Prevention is the only cure:
+
+1. **Iterate in an isolated COMP with its own small render.** A new visual
+   scene gets its own baseCOMP + its own renderTOP at ≤640px while iterating.
+   Never grow the main graph (HUD, existing scenes) during exploration —
+   compose the validated scene into the main output at the very END, at
+   final resolution. Build and judge the flower alone; assemble last.
+2. **Known bridge-killers, in observed order:** environmentlightCOMP (the
+   IBL prefilter is a GPU wall — during iteration use 2 plain lights + an
+   emissive ramp, or set Prefilter Quality to minimum), full-res renders,
+   multi-light PBR, large blurs/bloom at full res, maxparticles in the
+   hundreds of thousands. Add these at LOW quality first; crank quality
+   only after the look is validated at small size.
+3. **Freeze what you are not judging.** Scenes not under iteration get
+   cooking disabled (`op('X').allowCooking = False` via td_expr/run_script,
+   or bypass the render). Re-enable at composition time.
+4. **When calls start timing out, STOP calling.** Hammering retries into a
+   wedged bridge does nothing — the graph must decook first. Tell the user
+   exactly what to do in TD (spacebar to pause the timeline, or disable the
+   named heavy node) and wait. Then fix the architecture (points 1-3) before
+   resuming, or the wedge returns on the next iteration.
+
 ## Mandatory network hygiene after any build
 
 A network the user cannot read is a network the user cannot maintain. After the visual validation passes (never before — layout moves nodes, validate content first):
