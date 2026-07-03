@@ -113,3 +113,10 @@ def test_full_wiki_chunks_nonoperator_pages_get_wikip_ids(tmp_path):
     assert "wikip_pythonclasses" in by_id        # page concept: id wikip_
     assert by_id["wikip_pythonclasses"].title == "Python Classes"
     assert by_id["wikip_pythonclasses"].operators == []
+
+
+def test_normalize_strips_filesystem_hostile_chars():
+    from td_mcp.ingest.wiki import _normalize
+    assert _normalize("Palette/Mapping") == "palettemapping"
+    assert _normalize("Category:CHOPs") == "categorychops"
+    assert "/" not in _normalize("a/b/c")

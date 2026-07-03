@@ -47,8 +47,15 @@ CATEGORY_BY_FAMILY = {
 
 
 def _normalize(name: str) -> str:
-    """Lowercase + strip whitespace + strip underscores for matching."""
-    return "".join(name.lower().split()).replace("_", "")
+    """Lowercase + strip whitespace + strip underscores for matching.
+    Also drops filesystem-hostile chars: wiki titles like "Palette/Mapping"
+    would otherwise become nested cache paths and crash the write."""
+    return (
+        "".join(name.lower().split())
+        .replace("_", "")
+        .replace("/", "")
+        .replace(":", "")
+    )
 
 
 class WikiClient:
