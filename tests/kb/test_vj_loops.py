@@ -81,7 +81,7 @@ async def test_kb_ingest_vj_corpus_runs_pipeline(tmp_path):
 def test_search_attaches_visual_refs_when_table_has_matches():
     pd = pytest.importorskip("pandas")
     from unittest.mock import MagicMock, patch
-    from td_mcp.kb.vj_loops import VJLoopsKB, VJLoopPattern
+    from td_mcp.kb.vj_loops import VJLoopPattern
 
     pattern = VJLoopPattern(
         pattern_name="noise_warp_calm",

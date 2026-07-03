@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from td_mcp.kb.operators import get_catalog
-from td_mcp.kb.pop_patterns import POPPattern, POPPatternsKB, get_pop_kb
+from td_mcp.kb.pop_patterns import POPPatternsKB, get_pop_kb
 
 
 def test_seed_patterns_load():

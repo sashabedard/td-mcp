@@ -1,4 +1,4 @@
-from td_mcp.protocol import AnnotationSpec, LayoutDiff, OperatorPosition, OperatorRename
+from td_mcp.protocol import AnnotationSpec, LayoutDiff
 
 
 def test_layout_diff_constructs_empty():

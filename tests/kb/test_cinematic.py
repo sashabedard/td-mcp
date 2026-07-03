@@ -1,4 +1,4 @@
-from td_mcp.kb.cinematic import CinematicRecipe, CinematicKB, get_cinematic_kb
+from td_mcp.kb.cinematic import CinematicRecipe, get_cinematic_kb
 
 
 def test_recipe_schema_validates():
