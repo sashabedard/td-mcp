@@ -105,6 +105,31 @@ class WikiClient:
                 break
         return titles
 
+    def enumerate_all_pages(self) -> list[str]:
+        """All article titles (namespace 0) via the allpages API, paginated.
+        ~2100 titles on docs.derivative.ca; a handful of API calls."""
+        titles: list[str] = []
+        cont: dict = {}
+        while True:
+            self._throttle()
+            params = {
+                "action": "query",
+                "list": "allpages",
+                "aplimit": 500,
+                "apnamespace": 0,
+                "format": "json",
+                **cont,
+            }
+            r = self._client.get(WIKI_API, params=params)
+            r.raise_for_status()
+            data = r.json()
+            for m in data.get("query", {}).get("allpages", []):
+                titles.append(m["title"])
+            cont = data.get("continue", {})
+            if not cont:
+                break
+        return titles
+
     def fetch_page_text(self, title: str) -> str:
         """Fetch a page's rendered HTML and extract clean text. Uses on-disk
         cache keyed by normalized title; subsequent calls return cached text.
@@ -192,9 +217,142 @@ def ingest_family(
 def build_wiki_chunks_from_cache(
     cache_dir: Path = DEFAULT_CACHE_DIR,
 ) -> Iterator[Chunk]:
-    """Yield Chunks from previously-cached wiki pages without making any
-    network calls. The catalog map is reconstructed from the cache filenames.
-    """
+    """Yield Chunks from previously-cached wiki pages without network calls.
+    Delegates to the full-wiki builder: operator pages keep their historical
+    ids, concept/Python/guide pages get wikip_* ids."""
+    yield from build_full_wiki_chunks_from_cache(cache_dir)
+
+
+def _pages_manifest_path(cache_dir: Path) -> Path:
+    return cache_dir / "pages_manifest.json"
+
+
+def _load_pages_manifest(cache_dir: Path) -> dict:
+    p = _pages_manifest_path(cache_dir)
+    return json.loads(p.read_text()) if p.exists() else {}
+
+
+def ingest_all_pages(
+    client: WikiClient,
+    limit: int | None = None,
+    cache_dir: Path = DEFAULT_CACHE_DIR,
+) -> dict:
+    """Fetch EVERY wiki article (not just operator pages). Cached pages are
+    free; only new pages cost a request (1/sec politeness). A titles
+    manifest is persisted so non-operator pages keep their real title and
+    URL at chunk-build time. Resumable: re-run continues where it stopped."""
+    titles = client.enumerate_all_pages()
+    manifest_data = _load_pages_manifest(cache_dir)
+
+    fetched, cached, empty = 0, 0, 0
+    for title in titles:
+        norm = _normalize(title)
+        cache_file = cache_dir / f"{norm}.txt"
+        already = cache_file.exists()
+        if not already and limit is not None and fetched >= limit:
+            continue
+        text = client.fetch_page_text(title)
+        if norm not in manifest_data:
+            manifest_data[norm] = {"title": title}
+            _pages_manifest_path(cache_dir).parent.mkdir(parents=True, exist_ok=True)
+            _pages_manifest_path(cache_dir).write_text(json.dumps(manifest_data, indent=0))
+        if already:
+            cached += 1
+        elif text:
+            fetched += 1
+        else:
+            empty += 1
+
+    return {
+        "total_titles": len(titles),
+        "fetched_new": fetched,
+        "already_cached": cached,
+        "empty_or_failed": empty,
+        "remaining": len(titles) - fetched - cached - empty,
+    }
+
+
+def split_text(text: str, max_words: int = 700) -> list[str]:
+    """Split page text into ~max_words chunks on paragraph boundaries.
+    Splitting mid-paragraph hurts embedding quality; a page slightly over
+    budget stays whole rather than producing a tiny orphan chunk."""
+    words_total = len(text.split())
+    if words_total <= int(max_words * 1.3):
+        return [text]
+    paras = [p for p in text.split("\n\n") if p.strip()]
+    chunks: list[str] = []
+    current: list[str] = []
+    count = 0
+    for p in paras:
+        w = len(p.split())
+        if count + w > max_words and current:
+            chunks.append("\n\n".join(current))
+            current, count = [], 0
+        current.append(p)
+        count += w
+    if current:
+        # avoid a tiny trailing orphan: merge into the previous chunk
+        if chunks and count < max_words * 0.25:
+            chunks[-1] = chunks[-1] + "\n\n" + "\n\n".join(current)
+        else:
+            chunks.append("\n\n".join(current))
+    return chunks
+
+
+def build_full_wiki_chunks_from_cache(
+    cache_dir: Path = DEFAULT_CACHE_DIR,
+) -> Iterator[Chunk]:
+    """Yield Chunks for EVERY cached wiki page (operator pages and concept/
+    Python/guide pages alike). Operator pages keep their historical id
+    (wiki_<python_class>) on the first chunk for index continuity; long
+    pages are split on paragraph boundaries."""
+    from td_mcp.kb.operators import get_catalog
+
+    if not cache_dir.exists():
+        return
+
+    catalog = get_catalog()
+    by_norm = {_normalize(e.python_class): e for e in catalog.list()}
+    titles = _load_pages_manifest(cache_dir)
+
+    for txt_file in sorted(cache_dir.glob("*.txt")):
+        norm = txt_file.stem
+        text = txt_file.read_text()
+        if not text:
+            continue
+        entry = by_norm.get(norm)
+        meta = titles.get(norm, {})
+        if entry:
+            title = meta.get("title") or f"{entry.subtype} {entry.family}".strip()
+            base_id = f"wiki_{entry.python_class}"
+            operators = [entry.python_class]
+            families = [entry.family]
+        else:
+            title = meta.get("title") or norm
+            base_id = f"wikip_{norm}"
+            operators = []
+            families = []
+        slug = title.replace(" ", "_")
+        pieces = split_text(text)
+        for i, piece in enumerate(pieces):
+            suffix = "" if i == 0 else f"_{i:02d}"
+            part = f" (part {i + 1}/{len(pieces)})" if len(pieces) > 1 else ""
+            yield Chunk(
+                id=f"{base_id}{suffix}",
+                source="wiki",
+                source_url=f"{WIKI_BASE}/{slug}",
+                title=f"{title}{part}",
+                text=piece,
+                operators=operators,
+                families=families,
+            )
+
+
+def _legacy_build_wiki_chunks(
+    cache_dir: Path = DEFAULT_CACHE_DIR,
+) -> Iterator[Chunk]:
+    """Legacy operator-only chunk builder (superseded by
+    build_full_wiki_chunks_from_cache)."""
     if not cache_dir.exists():
         return
 

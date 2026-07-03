@@ -67,10 +67,49 @@ def test_build_wiki_chunks_from_cache_matches_catalog(tmp_path: Path):
     assert "spherical" in c.text
 
 
-def test_build_wiki_chunks_ignores_unknown_pages(tmp_path: Path):
+def test_build_wiki_chunks_keeps_unknown_pages_as_wikip(tmp_path: Path):
+    """Contract change with the full-wiki scrape: non-operator pages are no
+    longer dropped — they become wikip_* concept chunks."""
     cache = tmp_path / "wiki"
     cache.mkdir()
     (cache / "notarealoppop.txt").write_text("something")
     chunks = list(build_wiki_chunks_from_cache(cache_dir=cache))
-    # Unknown name should be silently dropped — not crash
-    assert chunks == []
+    assert len(chunks) == 1
+    assert chunks[0].id == "wikip_notarealoppop"
+    assert chunks[0].operators == []
+
+
+def test_split_text_short_page_stays_whole():
+    from td_mcp.ingest.wiki import split_text
+    text = "word " * 500
+    assert split_text(text.strip(), max_words=700) == [text.strip()]
+
+
+def test_split_text_long_page_splits_on_paragraphs():
+    from td_mcp.ingest.wiki import split_text
+    para = ("lorem " * 300).strip()
+    text = "\n\n".join([para] * 5)  # 1500 mots
+    pieces = split_text(text, max_words=700)
+    assert len(pieces) == 3  # 600+600+300, orphelin fusionné ou pas selon seuil
+    assert all(p for p in pieces)
+    # rien n'est perdu
+    assert sum(len(p.split()) for p in pieces) == 1500
+
+
+def test_full_wiki_chunks_nonoperator_pages_get_wikip_ids(tmp_path):
+    import json
+    from td_mcp.ingest.wiki import build_full_wiki_chunks_from_cache
+    (tmp_path / "feedbacktop.txt").write_text("feedback op page text")
+    (tmp_path / "renderpickdat.txt").write_text("some other page")
+    (tmp_path / "pythonclasses.txt").write_text("python classes overview")
+    (tmp_path / "pages_manifest.json").write_text(json.dumps({
+        "feedbacktop": {"title": "Feedback TOP"},
+        "pythonclasses": {"title": "Python Classes"},
+    }))
+    chunks = list(build_full_wiki_chunks_from_cache(tmp_path))
+    by_id = {c.id: c for c in chunks}
+    assert "wiki_feedbackTOP" in by_id           # page opérateur: id historique
+    assert by_id["wiki_feedbackTOP"].operators == ["feedbackTOP"]
+    assert "wikip_pythonclasses" in by_id        # page concept: id wikip_
+    assert by_id["wikip_pythonclasses"].title == "Python Classes"
+    assert by_id["wikip_pythonclasses"].operators == []

@@ -7,14 +7,29 @@
       "id": "point_cloud_starter",
       "name": "Point cloud starter (boxPOP → outPOP)",
       "description": "Minimal POP chain — a single boxPOP generator wired into an outPOP terminator inside a baseCOMP wrapper. Useful as the first step when learning POPs, or as a sanity check that your bridge + create + connect tools work.",
-      "tags": ["generator", "starter", "minimal"],
+      "tags": [
+        "generator",
+        "starter",
+        "minimal"
+      ],
       "difficulty": "easy",
       "ops": [
-        {"name": "box1", "op_type": "boxPOP", "params": {}},
-        {"name": "out1", "op_type": "outPOP", "params": {}}
+        {
+          "name": "box1",
+          "op_type": "boxPOP",
+          "params": {}
+        },
+        {
+          "name": "out1",
+          "op_type": "outPOP",
+          "params": {}
+        }
       ],
       "connections": [
-        {"out": "box1", "into": "out1"}
+        {
+          "out": "box1",
+          "into": "out1"
+        }
       ],
       "notes": "boxPOP generates a 6-face box mesh as points + topology. outPOP marks the chain endpoint — required for the POP family to be cookable when wrapped in a COMP and used as a Geometry source.",
       "pitfalls": [
@@ -26,16 +41,39 @@
       "id": "noise_displaced_grid",
       "name": "Noise-displaced grid (gridPOP → noisePOP → outPOP)",
       "description": "Generate a flat point grid, then modulate the P (position) attribute via noisePOP. Canonical recipe for procedural surface displacement and the foundation for most audio-reactive or time-driven POP looks.",
-      "tags": ["generator", "attribute-modifier", "displacement", "canonical"],
+      "tags": [
+        "generator",
+        "attribute-modifier",
+        "displacement",
+        "canonical"
+      ],
       "difficulty": "easy",
       "ops": [
-        {"name": "grid1", "op_type": "gridPOP", "params": {}},
-        {"name": "noise1", "op_type": "noisePOP", "params": {}},
-        {"name": "out1", "op_type": "outPOP", "params": {}}
+        {
+          "name": "grid1",
+          "op_type": "gridPOP",
+          "params": {}
+        },
+        {
+          "name": "noise1",
+          "op_type": "noisePOP",
+          "params": {}
+        },
+        {
+          "name": "out1",
+          "op_type": "outPOP",
+          "params": {}
+        }
       ],
       "connections": [
-        {"out": "grid1", "into": "noise1"},
-        {"out": "noise1", "into": "out1"}
+        {
+          "out": "grid1",
+          "into": "noise1"
+        },
+        {
+          "out": "noise1",
+          "into": "out1"
+        }
       ],
       "notes": "noisePOP reads the P attribute from upstream and additively perturbs it (default behavior). Tune amplitude/period via noisePOP's params. To drive the noise period from a CHOP, expose the param as Custom and bind to a CHOP via export — or use a choptoPOP upstream to feed values per-point.",
       "pitfalls": [
@@ -48,15 +86,36 @@
       "id": "chop_to_pop_basic",
       "name": "CHOP → POP cross-family bridge (constantCHOP + choptoPOP → outPOP)",
       "description": "Convert a CHOP's channel values into POP points/attributes via choptoPOP. Foundation for audio-reactive POP work — replace constantCHOP with audiofilterCHOP / analyzeCHOP / fft outputs to drive POP attributes from sound.",
-      "tags": ["cross-family", "chop-input", "audio-reactive-base"],
+      "tags": [
+        "cross-family",
+        "chop-input",
+        "audio-reactive-base"
+      ],
       "difficulty": "easy",
       "ops": [
-        {"name": "src", "op_type": "constantCHOP", "params": {}},
-        {"name": "c2p", "op_type": "choptoPOP", "params": {"chop": "src"}},
-        {"name": "out1", "op_type": "outPOP", "params": {}}
+        {
+          "name": "src",
+          "op_type": "constantCHOP",
+          "params": {}
+        },
+        {
+          "name": "c2p",
+          "op_type": "choptoPOP",
+          "params": {
+            "chop": "src"
+          }
+        },
+        {
+          "name": "out1",
+          "op_type": "outPOP",
+          "params": {}
+        }
       ],
       "connections": [
-        {"out": "c2p", "into": "out1"}
+        {
+          "out": "c2p",
+          "into": "out1"
+        }
       ],
       "notes": "choptoPOP has ZERO wire inputs — the CHOP source is bound via the `chop` param as a relative or absolute op path. The `src` value here is a sibling-relative path that TD resolves against c2p's parent. This is the convention for ALL cross-family ingestion POPs (choptoPOP, toptoPOP, dattoPOP, soptoPOP).",
       "pitfalls": [
@@ -69,16 +128,39 @@
       "id": "sphere_with_noise",
       "name": "Noise-displaced sphere (spherePOP → noisePOP → outPOP)",
       "description": "Sphere generator with noise displacement on P. Variant of noise_displaced_grid using a closed-topology sphere instead of a flat grid — the displacement reads radially-ish (because P starts on a sphere) rather than vertically, producing organic blob shapes well-suited to creature/asteroid/morph aesthetics.",
-      "tags": ["generator", "attribute-modifier", "displacement", "organic"],
+      "tags": [
+        "generator",
+        "attribute-modifier",
+        "displacement",
+        "organic"
+      ],
       "difficulty": "easy",
       "ops": [
-        {"name": "sphere1", "op_type": "spherePOP", "params": {}},
-        {"name": "noise1", "op_type": "noisePOP", "params": {}},
-        {"name": "out1", "op_type": "outPOP", "params": {}}
+        {
+          "name": "sphere1",
+          "op_type": "spherePOP",
+          "params": {}
+        },
+        {
+          "name": "noise1",
+          "op_type": "noisePOP",
+          "params": {}
+        },
+        {
+          "name": "out1",
+          "op_type": "outPOP",
+          "params": {}
+        }
       ],
       "connections": [
-        {"out": "sphere1", "into": "noise1"},
-        {"out": "noise1", "into": "out1"}
+        {
+          "out": "sphere1",
+          "into": "noise1"
+        },
+        {
+          "out": "noise1",
+          "into": "out1"
+        }
       ],
       "notes": "Same noise modifier as noise_displaced_grid but the input topology changes the look entirely. spherePOP has a `rows`/`cols` (or `divisions`) param controlling tessellation density — bump it for finer displacement detail. For perfectly spherical-feel displacement, set noisePOP to perturb along the normal rather than world axes (check the noisePOP `apply` / `direction` params).",
       "pitfalls": [
@@ -91,16 +173,39 @@
       "id": "transform_grid",
       "name": "Grid with transform (gridPOP → transformPOP → outPOP)",
       "description": "Most basic affine modifier on a generated grid — translate, rotate, scale the point cloud as a whole. Building block when composing POP chains: drop a transformPOP between any generator and its consumer to reposition without touching the generator's params.",
-      "tags": ["generator", "modifier", "affine", "building-block"],
+      "tags": [
+        "generator",
+        "modifier",
+        "affine",
+        "building-block"
+      ],
       "difficulty": "easy",
       "ops": [
-        {"name": "grid1", "op_type": "gridPOP", "params": {}},
-        {"name": "xform1", "op_type": "transformPOP", "params": {}},
-        {"name": "out1", "op_type": "outPOP", "params": {}}
+        {
+          "name": "grid1",
+          "op_type": "gridPOP",
+          "params": {}
+        },
+        {
+          "name": "xform1",
+          "op_type": "transformPOP",
+          "params": {}
+        },
+        {
+          "name": "out1",
+          "op_type": "outPOP",
+          "params": {}
+        }
       ],
       "connections": [
-        {"out": "grid1", "into": "xform1"},
-        {"out": "xform1", "into": "out1"}
+        {
+          "out": "grid1",
+          "into": "xform1"
+        },
+        {
+          "out": "xform1",
+          "into": "out1"
+        }
       ],
       "notes": "transformPOP applies a single transform matrix to ALL points uniformly (rigid motion). For per-point variation use mathPOP or attributePOP with expressions. For animated transforms, expression-bind the t/r/s params to a CHOP or absTime.frame.",
       "pitfalls": [
@@ -113,20 +218,188 @@
       "id": "top_to_pop_basic",
       "name": "TOP → POP cross-family bridge (noiseTOP + toptoPOP → outPOP)",
       "description": "Convert a TOP's pixels into POP points (one point per pixel or sampled subset). Foundation for depth-to-points work, video-reactive particles, and any workflow where the visual source lives in TOP space.",
-      "tags": ["cross-family", "top-input", "video-reactive-base", "depth-to-points-base"],
+      "tags": [
+        "cross-family",
+        "top-input",
+        "video-reactive-base",
+        "depth-to-points-base"
+      ],
       "difficulty": "easy",
       "ops": [
-        {"name": "src", "op_type": "noiseTOP", "params": {}},
-        {"name": "t2p", "op_type": "toptoPOP", "params": {"input0top": "src"}},
-        {"name": "out1", "op_type": "outPOP", "params": {}}
+        {
+          "name": "src",
+          "op_type": "noiseTOP",
+          "params": {}
+        },
+        {
+          "name": "t2p",
+          "op_type": "toptoPOP",
+          "params": {
+            "input0top": "src"
+          }
+        },
+        {
+          "name": "out1",
+          "op_type": "outPOP",
+          "params": {}
+        }
       ],
       "connections": [
-        {"out": "t2p", "into": "out1"}
+        {
+          "out": "t2p",
+          "into": "out1"
+        }
       ],
       "notes": "toptoPOP follows the same param-not-wire convention as choptoPOP — the source TOP is bound via `input0top` (note the indexed naming, hinting at multi-TOP variants). Swap noiseTOP for a kinectTOP or realsenseTOP / nidepthTOP to get true depth-to-points; swap for a moviefileinTOP to get video-driven points.",
       "pitfalls": [
         "toptoPOP has 0 inputConnectors. Use td_set_param input0top=<path>, NOT td_connect_ops.",
         "Default sampling reads ALL pixels — at 1920×1080 that's 2M points, which can tank framerate. Downsample the source TOP (resolutionTOP) before feeding into toptoPOP for interactive work, or set toptoPOP's sampling/density params."
+      ],
+      "verified_on_build": "2025.32820"
+    },
+    {
+      "id": "particle_collision_ray",
+      "name": "Particle collisions with Ray POP (reflect + damp + mix)",
+      "description": "Particle system where particles bounce off any collider geometry: rayPOP casts along particle velocity against the collider, mathcombinePOP computes a damped reflected velocity and mixes it in only when particles are close to the surface. Verified live against TD 2025 from elekktronaut Tutorial 78.",
+      "tags": [
+        "particles",
+        "collision",
+        "simulation",
+        "ray",
+        "audio-reactive-ready"
+      ],
+      "difficulty": "medium",
+      "ops": [
+        {
+          "name": "emitter",
+          "op_type": "spherePOP",
+          "params": {
+            "scale": 0.6,
+            "beginanglev": 0.0,
+            "endanglev": 90.0
+          }
+        },
+        {
+          "name": "emit_pos",
+          "op_type": "transformPOP",
+          "params": {
+            "ty": 3.0
+          }
+        },
+        {
+          "name": "particles",
+          "op_type": "particlePOP",
+          "params": {
+            "maxparticles": 100000,
+            "birthrate": 500.0,
+            "life": 5.0,
+            "lifevariance": 1.0,
+            "initvelocityy": -0.1,
+            "initmass": 5.0,
+            "damping": 0.1,
+            "targetpop": "./out_pop"
+          }
+        },
+        {
+          "name": "collider",
+          "op_type": "spherePOP",
+          "params": {
+            "scale": 1.5
+          }
+        },
+        {
+          "name": "ray",
+          "op_type": "rayPOP",
+          "params": {
+            "rayattrib": "PartVel",
+            "hitnormal": true,
+            "doreflectedray": true,
+            "dist": true
+          }
+        },
+        {
+          "name": "reflect",
+          "op_type": "mathcombinePOP",
+          "params": {
+            "comb0oper": "length",
+            "comb0scopea": "PartVel",
+            "comb0result": "MagV",
+            "comb1oper": "mult",
+            "comb1scopea": "RayReflect",
+            "comb1scopeb": "MagV",
+            "comb1result": "reflectedVel",
+            "comb2oper": "mult",
+            "comb2scopea": "reflectedVel",
+            "comb2scopeb": "0.35",
+            "comb2result": "reflectedDampedVel",
+            "comb3oper": "lt",
+            "comb3scopea": "RayDistance",
+            "comb3scopeb": "0.25",
+            "comb3result": "Close",
+            "comb4oper": "mix",
+            "comb4scopea": "PartVel",
+            "comb4scopeb": "reflectedDampedVel",
+            "comb4scopec": "Close",
+            "comb4result": "PartVel",
+            "comb5oper": "copya",
+            "comb5scopea": "0 -0.15 0",
+            "comb5result": "PartForce"
+          }
+        },
+        {
+          "name": "turbulence",
+          "op_type": "noisePOP",
+          "params": {
+            "period": 0.16,
+            "amp0": 0.005
+          }
+        },
+        {
+          "name": "out_pop",
+          "op_type": "nullPOP",
+          "params": {}
+        }
+      ],
+      "connections": [
+        {
+          "out": "emitter",
+          "into": "emit_pos"
+        },
+        {
+          "out": "emit_pos",
+          "into": "particles"
+        },
+        {
+          "out": "particles",
+          "into": "ray"
+        },
+        {
+          "out": "collider",
+          "into": "ray",
+          "in_index": 1
+        },
+        {
+          "out": "ray",
+          "into": "reflect"
+        },
+        {
+          "out": "reflect",
+          "into": "turbulence"
+        },
+        {
+          "out": "turbulence",
+          "into": "out_pop"
+        }
+      ],
+      "notes": "The feedback loop is closed by particlePOP.targetpop pointing at the terminal nullPOP — forces applied downstream (reflect, turbulence) feed back into the next sim step. The mathcombinePOP does everything: velocity magnitude (MagV), reflected velocity from the ray hit (RayReflect x MagV), damping (x0.35), proximity gate (RayDistance < 0.25 -> Close), the conditional mix back into PartVel, and constant gravity via copya into PartForce. For audio reactivity, drive particlePOP.birthrate with an expression on a kick-detection CHOP (e.g. 4000 + op('kick')[0]*8000). Swap the collider spherePOP for any POP geometry (works with imported point clouds via pointfileinPOP + a mesh).",
+      "pitfalls": [
+        "The ray-output attribute is 'RayReflect' (and 'RayDistance'), NOT 'ReflectedRay' — enable 'doreflectedray', 'hitnormal' and 'dist' on the rayPOP or the attributes simply don't exist and the mathcombine silently produces zeros.",
+        "particlePOP.targetpop MUST point at the end of the force chain (the nullPOP), not at the particlePOP itself — otherwise reflected velocities are computed but never applied.",
+        "A build is not done until a td_snapshot proves it renders: camera framing, weights left at 0 and fit/resolution crops all produce a black/flat frame with a perfectly correct POP chain underneath.",
+        "Damping 0.35 on the reflected velocity is the difference between particles that settle on the surface and particles that jitter forever — tune 0.2-0.5."
+      ],
+      "references": [
+        "https://www.youtube.com/watch?v=X6RgNdsYMLA (elekktronaut - Particle Collisions with Ray POP, Tutorial 78)"
       ],
       "verified_on_build": "2025.32820"
     }

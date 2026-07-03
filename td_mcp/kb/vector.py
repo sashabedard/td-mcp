@@ -166,6 +166,52 @@ class VectorKB:
             "path": str(self.db_path),
         }
 
+    def upsert(self, chunks: list[Chunk]) -> dict:
+        """Incremental index update: embed and add ONLY chunks that are new
+        or whose text changed. A full reindex embeds everything (~15 min at
+        3k chunks); upsert makes folding fresh knowledge near-free.
+
+        Falls back to reindex() when no table exists yet.
+        """
+        if not chunks:
+            return {"added": 0, "updated": 0, "unchanged": 0, "total": self.count()}
+        if not self.has_index():
+            r = self.reindex(chunks)
+            return {"added": r["indexed"], "updated": 0, "unchanged": 0, "total": r["indexed"]}
+
+        table = self._get_db().open_table(TABLE_NAME)
+        existing = {
+            row["id"]: row["text"]
+            for row in table.search().select(["id", "text"]).limit(1_000_000).to_list()
+        }
+
+        to_add: list[Chunk] = []
+        to_update: list[Chunk] = []
+        unchanged = 0
+        for c in chunks:
+            prior = existing.get(c.id)
+            if prior is None:
+                to_add.append(c)
+            elif prior != c.text:
+                to_update.append(c)
+            else:
+                unchanged += 1
+
+        pending = to_add + to_update
+        if pending:
+            vectors = self._embed([c.embed_text() for c in pending])
+            if to_update:
+                ids = ",".join(f"'{c.id}'" for c in to_update)
+                table.delete(f"id IN ({ids})")
+            table.add([c.to_record(v) for c, v in zip(pending, vectors)])
+
+        return {
+            "added": len(to_add),
+            "updated": len(to_update),
+            "unchanged": unchanged,
+            "total": table.count_rows(),
+        }
+
     def search(
         self,
         query: str,
@@ -286,5 +332,11 @@ def build_seed_chunks() -> list[Chunk]:
     from td_mcp.ingest.youtube import build_chunks_from_cache as build_yt_chunks
 
     chunks.extend(build_yt_chunks())
+
+    # Vision-pass tutorial chunks (kb_ingest_tutorial_vision populates).
+    # Complement the transcript chunks: ytv_* ids vs yt_*.
+    from td_mcp.ingest.tutorial_vision import build_chunks_from_cache as build_vision_chunks
+
+    chunks.extend(build_vision_chunks())
 
     return chunks
