@@ -92,7 +92,9 @@ def classify_frame_haiku(frame_path: Path, cache: dict) -> dict:
     """One Haiku call per frame. Cached by SHA256(frame bytes).
 
     Returns {"energy": "calm|medium|high|frantic", "palette_hex": [...]}.
-    On API error returns {"energy": "medium", "palette_hex": []}.
+    On API error returns {"energy": "unknown", "palette_hex": [], "error": str}
+    — never a plausible default, so failed classifications stay
+    distinguishable from real ones and are NOT written to the cache.
     """
     data = frame_path.read_bytes()
     key = hashlib.sha256(data).hexdigest()
@@ -100,10 +102,11 @@ def classify_frame_haiku(frame_path: Path, cache: dict) -> dict:
         return cache[key]
 
     import base64
-    from anthropic import Anthropic
 
-    client = Anthropic()
     try:
+        from anthropic import Anthropic
+
+        client = Anthropic()
         msg = client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=256,
@@ -130,7 +133,7 @@ def classify_frame_haiku(frame_path: Path, cache: dict) -> dict:
         return out
     except Exception as e:
         logger.warning("Haiku classify failed for %s: %s", frame_path, e)
-        return {"energy": "medium", "palette_hex": []}
+        return {"energy": "unknown", "palette_hex": [], "error": str(e)}
 
 
 def ingest_corpus(url_list_path: Path, cache_path: Path | None = None) -> dict:
@@ -144,7 +147,7 @@ def ingest_corpus(url_list_path: Path, cache_path: Path | None = None) -> dict:
     cache = json.loads(cache_path.read_text()) if cache_path and cache_path.exists() else {}
 
     table = open_table()
-    report = {"videos_processed": 0, "frames_added": 0, "videos_failed": 0}
+    report = {"videos_processed": 0, "frames_added": 0, "frames_failed": 0, "videos_failed": 0}
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
@@ -162,6 +165,9 @@ def ingest_corpus(url_list_path: Path, cache_path: Path | None = None) -> dict:
             records = []
             for frame, emb in zip(frames, embeddings):
                 cls = classify_frame_haiku(frame, cache)
+                if cls.get("error"):
+                    report["frames_failed"] += 1
+                    continue
                 records.append({
                     "id": uuid.uuid4().hex,
                     "artist": entry["artist"],

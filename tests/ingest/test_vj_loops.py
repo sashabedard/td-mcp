@@ -1,4 +1,3 @@
-from pathlib import Path
 from unittest.mock import patch
 
 
@@ -27,3 +26,29 @@ def test_classify_frame_haiku_uses_cache(tmp_path):
     cache = {hashlib.sha256(b"fake png bytes").hexdigest(): {"energy": "calm", "palette_hex": ["#000000"]}}
     result = classify_frame_haiku(frame, cache)
     assert result["energy"] == "calm"
+
+
+def test_classify_frame_haiku_api_error_is_explicit_and_uncached(tmp_path):
+    """A failed API call must not masquerade as a real classification
+    and must not poison the cache."""
+    import sys
+    import types
+    from td_mcp.ingest.vj_loops import classify_frame_haiku
+
+    frame = tmp_path / "f.png"
+    frame.write_bytes(b"other png bytes")
+    cache = {}
+
+    fake_anthropic = types.ModuleType("anthropic")
+
+    class _Boom:
+        def __init__(self):
+            raise RuntimeError("no api key")
+
+    fake_anthropic.Anthropic = _Boom
+    with patch.dict(sys.modules, {"anthropic": fake_anthropic}):
+        result = classify_frame_haiku(frame, cache)
+
+    assert result["energy"] == "unknown"
+    assert "error" in result
+    assert cache == {}

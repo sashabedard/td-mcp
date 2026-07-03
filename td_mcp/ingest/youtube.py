@@ -37,6 +37,10 @@ DEFAULT_CACHE_DIR = Path(
 )
 DEFAULT_WHISPER_MODEL = os.environ.get("TD_MCP_WHISPER_MODEL", "base")
 SOURCES_CONFIG = Path(__file__).parent.parent / "kb" / "data" / "youtube_sources.json"
+# YouTube bot-checks anonymous downloads and 403s DASH data (SABR gating,
+# observed 2026-07). Same workaround as tutorial_vision: browser cookies +
+# web_safari client + HLS. Flat-playlist listing still works anonymously.
+YTDLP_COOKIES_BROWSER = os.environ.get("TD_MCP_YTDLP_COOKIES_BROWSER", "")
 
 
 @dataclass
@@ -67,12 +71,16 @@ def load_sources() -> dict:
 
 def list_channel_videos(channel_url: str, limit: int | None = None) -> list[VideoMeta]:
     """Use yt-dlp's flat-playlist mode to enumerate videos without downloading."""
-    cmd = [
-        "yt-dlp",
-        "--quiet",
+    # ASCII Unit Separator (0x1f) won't appear in YouTube titles (which often
+    # contain '|' as a separator), so it's safe as a field delimiter.
+    SEP = "\x1f"
+    cmd = ["yt-dlp", "--quiet"]
+    if YTDLP_COOKIES_BROWSER:
+        cmd += ["--cookies-from-browser", YTDLP_COOKIES_BROWSER]
+    cmd += [
         "--flat-playlist",
         "--print",
-        "%(id)s|%(title)s|%(duration)s|%(channel)s|%(webpage_url)s",
+        f"%(id)s{SEP}%(title)s{SEP}%(duration)s{SEP}%(channel)s{SEP}%(webpage_url)s",
     ]
     if limit:
         cmd.extend(["--playlist-end", str(limit)])
@@ -81,7 +89,7 @@ def list_channel_videos(channel_url: str, limit: int | None = None) -> list[Vide
     out = subprocess.check_output(cmd, text=True, stderr=subprocess.DEVNULL)
     videos = []
     for line in out.strip().splitlines():
-        parts = line.split("|", 4)
+        parts = line.split(SEP, 4)
         if len(parts) != 5:
             continue
         vid, title, duration, channel, url = parts
@@ -115,11 +123,14 @@ def download_audio(meta: VideoMeta, channel_handle: str, cache_dir: Path = DEFAU
     if audio_path.exists():
         return audio_path
 
-    cmd = [
-        "yt-dlp",
-        "--quiet",
+    cmd = ["yt-dlp", "--quiet"]
+    if YTDLP_COOKIES_BROWSER:
+        cmd += ["--cookies-from-browser", YTDLP_COOKIES_BROWSER]
+    cmd += [
+        "--extractor-args", "youtube:player_client=web_safari",
         "-f",
-        "bestaudio[ext=m4a]/bestaudio",
+        "bestaudio[ext=m4a]/bestaudio/best",
+        "-S", "proto:m3u8",
         "-o",
         str(audio_path).replace(".m4a", ".%(ext)s"),
         meta.url,
