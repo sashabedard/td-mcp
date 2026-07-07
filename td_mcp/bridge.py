@@ -37,8 +37,13 @@ class TDBridge:
             # WebServer DAT does not respond to WS-level ping frames, so the
             # default 20s ping/pong cycle would silently close the connection
             # whenever the agent paused for more than 20s between calls.
+            # max_size lifts the websockets default of 1 MiB — a single
+            # td_snapshot of a 720x1280 16-bit-float TOP exceeds it, which
+            # killed the reader loop mid-session. 256 MiB bounds memory while
+            # covering 4K float frames (localhost trust model).
             self._ws = await websockets.connect(
-                url, open_timeout=timeout, ping_interval=None
+                url, open_timeout=timeout, ping_interval=None,
+                max_size=256 * 1024 * 1024,
             )
             self._reader_task = asyncio.create_task(self._reader_loop(self._ws))
 
@@ -83,14 +88,24 @@ class TDBridge:
                     )
         except asyncio.CancelledError:
             pass
-        except Exception:
-            # Connection died — drain pending
+        except Exception as e:
+            # Connection died — drain pending. Keep the cause: a bare
+            # "reader crashed" hides actionable failures (payload too big,
+            # connection reset) behind an identical symptom.
             for fut in self._pending.values():
                 if not fut.done():
-                    fut.set_exception(TDError("Bridge reader crashed"))
+                    fut.set_exception(TDError(f"Bridge reader crashed: {e!r}"))
             self._pending.clear()
 
-    async def send(self, action: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def send(
+        self,
+        action: str,
+        data: dict[str, Any] | None = None,
+        timeout: float | None = None,
+    ) -> dict[str, Any]:
+        """`timeout` overrides the connection default for this one call —
+        needed by known-long actions (full-catalog introspection) without
+        loosening the 5s guard that catches a wedged cook thread early."""
         if self._ws is None:
             raise TDError("Not connected — call td_connect first")
 
@@ -100,12 +115,13 @@ class TDBridge:
         fut: asyncio.Future[dict[str, Any]] = asyncio.get_running_loop().create_future()
         self._pending[msg_id] = fut
 
+        effective_timeout = timeout if timeout is not None else self._timeout
         try:
             await self._ws.send(req.model_dump_json(exclude_none=True))
-            return await asyncio.wait_for(fut, timeout=self._timeout)
+            return await asyncio.wait_for(fut, timeout=effective_timeout)
         except asyncio.TimeoutError as e:
             self._pending.pop(msg_id, None)
-            raise TDError(f'Action "{action}" timed out after {self._timeout}s') from e
+            raise TDError(f'Action "{action}" timed out after {effective_timeout}s') from e
 
 
 bridge = TDBridge()

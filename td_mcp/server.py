@@ -33,6 +33,12 @@ _checkpoints: list[dict] = []
 MAX_CHECKPOINTS = 20
 _project_folder_cache: str | None = None
 
+# Session plan registered via td_plan. The soft gate in td_create_op nudges
+# agents to ground builds in the KB before mutating the project — prompt-only
+# protocols get rationalized away; a mechanical warning does not.
+_session_plan: dict | None = None
+_plan_gaps_warned: bool = False
+
 
 async def _get_project_folder() -> str:
     global _project_folder_cache
@@ -179,6 +185,94 @@ async def td_op_info(path: str) -> dict:
 
 
 @mcp.tool()
+async def td_plan(
+    intention: str,
+    stages: list[dict],
+    gaps: list[str] | None = None,
+    success_criteria: str = "",
+) -> dict:
+    """Register the build plan for this session BEFORE creating operators.
+
+    Call this after decomposing the request and searching the KB, before the
+    first td_create_op. Until a plan is registered, every td_create_op
+    response carries a warning (hard refusal with TD_MCP_REQUIRE_PLAN=1).
+
+    `intention`: one sentence — what is being built and for whom.
+    `stages`: one entry per build stage, each a dict like
+        {"name": "sim loop", "ops": ["particlePOP", "forceradialPOP"],
+         "kb_source": "ytv_4bIQXKJaWlA_04", "confidence": "vision-chunk"}
+      confidence tiers: curated-pattern > vision-chunk > wiki > transcript
+      > improvised.
+    `gaps`: what the KB did NOT tell you. A gap is NOT a license to
+      improvise — resolve it by escalating retrieval (kb_get_tutorial, raw
+      transcript, wiki, web) BEFORE building the stage that depends on it.
+      Re-call td_plan with the updated stages once resolved.
+    `success_criteria`: what the final snapshot must show to call it done.
+
+    Re-calling replaces the previous plan (normal when scope evolves —
+    silent drift is the thing to avoid, not revision).
+    """
+    global _session_plan, _plan_gaps_warned
+    if not intention.strip():
+        return {"ok": False, "error": "intention is required"}
+    if not stages:
+        return {"ok": False, "error": "at least one stage is required"}
+    _session_plan = {
+        "intention": intention,
+        "stages": stages,
+        "gaps": gaps or [],
+        "success_criteria": success_criteria,
+        "registered_at": time.time(),
+    }
+    _plan_gaps_warned = False
+    response = {"ok": True, "registered": True, "stage_count": len(stages)}
+    improvised = [
+        s.get("name", f"stage {i}")
+        for i, s in enumerate(stages)
+        if "improvis" in str(s.get("confidence", "")).lower()
+    ]
+    if gaps:
+        response["gap_protocol"] = (
+            f"{len(gaps)} unresolved gap(s). Escalate retrieval NOW — "
+            "kb_get_tutorial for the full video, raw transcript over vision "
+            "on conflicts, wiki, then web — and re-register the plan. "
+            "Building through a gap costs a full build-diagnose-rebuild cycle."
+        )
+    if improvised:
+        response["improvised_stages"] = improvised
+        response["improvised_note"] = (
+            "These stages rest on improvisation — flag them to the user "
+            "BEFORE building, and validate them first in the visual loop."
+        )
+    return response
+
+
+def _plan_gate() -> dict:
+    """Warning fields to merge into td_create_op responses (soft gate)."""
+    global _plan_gaps_warned
+    import os
+
+    if _session_plan is None:
+        return {
+            "plan_warning": (
+                "No plan registered for this session. Call td_plan first "
+                "(intention + KB-grounded stages + gaps). Set "
+                "TD_MCP_REQUIRE_PLAN=1 to make this a hard error."
+            )
+        }
+    if _session_plan["gaps"] and not _plan_gaps_warned:
+        _plan_gaps_warned = True
+        return {
+            "plan_warning": (
+                f"Plan has {len(_session_plan['gaps'])} unresolved gap(s): "
+                f"{_session_plan['gaps']}. Resolve via retrieval before "
+                "building the dependent stages."
+            )
+        }
+    return {}
+
+
+@mcp.tool()
 async def td_create_op(
     op_type: str,
     parent: str = "/project1",
@@ -192,7 +286,16 @@ async def td_create_op(
     KB-validated: unknown op_type returns {ok: false} with close-match
     suggestions instead of hitting TD. Use kb_list_operators or
     kb_get_operator to browse the catalog.
+
+    Expects a session plan registered via td_plan — creates without one
+    succeed but carry a `plan_warning` (hard error if TD_MCP_REQUIRE_PLAN=1).
     """
+    import os
+
+    gate = _plan_gate()
+    if gate and _session_plan is None and os.environ.get("TD_MCP_REQUIRE_PLAN"):
+        return {"ok": False, "error": gate["plan_warning"]}
+
     catalog = get_catalog()
     if not catalog.is_empty:
         if catalog.get(op_type) is None:
@@ -205,7 +308,10 @@ async def td_create_op(
                     "kb_refresh_operators_catalog if the catalog is stale."
                 ),
             }
-    return await _call("create_op", type=op_type, parent=parent, name=name, x=x, y=y)
+    result = await _call("create_op", type=op_type, parent=parent, name=name, x=x, y=y)
+    if result.get("ok") and gate:
+        return {**result, **gate}
+    return result
 
 
 @mcp.tool()
@@ -239,9 +345,23 @@ async def td_set_param(path: str, param: str, value: int | float | str | bool) -
     """Set a single parameter value on an operator.
 
     `param` is the parameter's internal name (e.g. 'period', 'rx', 'amp') —
-    NOT the display label. Case sensitive.
+    NOT the display label. Case sensitive. On an unknown param, the error
+    carries close-match suggestions from the enriched operators catalog.
     """
-    return await _call("set_param", path=path, param=param, value=value)
+    result = await _call("set_param", path=path, param=param, value=value)
+    if not result.get("ok"):
+        # One extra roundtrip only on the failure path: resolve the op's
+        # class so the catalog can suggest what the caller probably meant.
+        try:
+            probe = await _call("eval", expression=f"type(op({path!r})).__name__")
+            op_class = str(probe.get("value", "")).strip()
+            suggestions = get_catalog().suggest_params(op_class, param)
+            if suggestions:
+                result["suggestions"] = suggestions
+                result["hint"] = f"Param names on {op_class} close to {param!r}."
+        except Exception:
+            pass
+    return result
 
 
 @mcp.tool()
@@ -411,14 +531,31 @@ async def kb_list_operators(family: str | None = None, limit: int = 50, offset: 
 
 
 @mcp.tool()
-async def kb_get_operator(query: str) -> dict:
-    """Lookup an operator by python_class name. If not found, returns suggestions."""
+async def kb_get_operator(query: str, include_params: bool = True) -> dict:
+    """Lookup an operator by python_class name. If not found, returns suggestions.
+
+    With an enriched catalog (kb_refresh_operators_catalog include_params=True),
+    the entry carries every settable parameter: internal name (what
+    td_set_param wants), display label (what tutorials say aloud), style,
+    and menu tokens. Use this INSTEAD of creating the op + td_op_info just
+    to discover param names.
+    """
     catalog = get_catalog()
     if catalog.is_empty:
         return {"ok": False, "error": "Catalog is empty."}
     entry = catalog.get(query)
     if entry is not None:
-        return {"ok": True, "found": True, **entry.model_dump()}
+        dump = entry.model_dump(exclude_defaults=True)
+        dump.setdefault("family", entry.family)
+        dump.setdefault("python_class", entry.python_class)
+        if not include_params:
+            dump.pop("params", None)
+        if include_params and not entry.params:
+            dump["params_note"] = (
+                "Catalog predates param enrichment — run "
+                "kb_refresh_operators_catalog with TD connected."
+            )
+        return {"ok": True, "found": True, **dump}
     return {
         "ok": True,
         "found": False,
@@ -428,48 +565,98 @@ async def kb_get_operator(query: str) -> dict:
 
 
 @mcp.tool()
-async def kb_refresh_operators_catalog() -> dict:
+async def kb_refresh_operators_catalog(include_params: bool = True) -> dict:
     """Introspect the connected TD instance, regenerate the operators catalog,
     and persist it to td_mcp/kb/data/operators.json.
 
     Requires an active bridge. Uses the convention that creatable op classes
     start with a lowercase letter — abstract bases (ObjectCOMP, PanelCOMP, ...)
     are filtered out.
+
+    include_params (default True) instantiates each class once inside a
+    scratch COMP to capture its parameter schema (name, label, style, menu
+    tokens) — this is what lets kb_get_operator answer param questions and
+    td_set_param suggest fixes without live roundtrips. Takes ~10-60s and
+    briefly creates/destroys one op per class; the scratch COMP is removed
+    even on failure. Pass include_params=False for the fast name-only pass.
+
+    The result is written to a temp file TD-side and read back from disk
+    (same-machine trust model, like checkpoints) — the full param schema is
+    too large to push through the WS bridge comfortably.
     """
-    introspect = """
-import json
+    introspect = f"""
+import json, tempfile, os
+INCLUDE_PARAMS = {include_params!r}
 suffixes = ['CHOP', 'TOP', 'SOP', 'POP', 'DAT', 'COMP', 'MAT']
 ops = []
-for clsname in dir(td):
-    if clsname.startswith('_') or not clsname[0].islower():
-        continue
-    for suffix in suffixes:
-        if clsname.endswith(suffix) and clsname != suffix and len(clsname) > len(suffix):
-            ops.append({
-                'python_class': clsname,
-                'family': suffix,
-                'subtype': clsname[:-len(suffix)],
-            })
-            break
-print(json.dumps({'build': getattr(app, 'build', ''), 'operators': ops}))
+scratch = None
+if INCLUDE_PARAMS:
+    scratch = root.create(baseCOMP, 'td_mcp_introspect_tmp')
+try:
+    for clsname in dir(td):
+        if clsname.startswith('_') or not clsname[0].islower():
+            continue
+        for suffix in suffixes:
+            if clsname.endswith(suffix) and clsname != suffix and len(clsname) > len(suffix):
+                entry = {{
+                    'python_class': clsname,
+                    'family': suffix,
+                    'subtype': clsname[:-len(suffix)],
+                }}
+                if INCLUDE_PARAMS:
+                    try:
+                        inst = scratch.create(getattr(td, clsname))
+                        params = []
+                        for p in inst.pars():
+                            d = {{'name': p.name, 'label': p.label, 'style': p.style}}
+                            try:
+                                menu = list(p.menuNames)
+                                if menu:
+                                    d['menu_names'] = menu
+                            except Exception:
+                                pass
+                            params.append(d)
+                        entry['params'] = params
+                        inst.destroy()
+                    except Exception:
+                        pass  # some classes refuse creation (license, context)
+                ops.append(entry)
+                break
+finally:
+    if scratch is not None:
+        scratch.destroy()
+fd, path = tempfile.mkstemp(suffix='.json', prefix='td_mcp_catalog_')
+with os.fdopen(fd, 'w') as f:
+    json.dump({{'build': getattr(app, 'build', ''), 'operators': ops}}, f)
+print(path)
 """
-    result = await bridge.send("run_script", {"code": introspect})
+    # Instantiating ~700 op classes outruns the 5s wedge guard by design.
+    result = await bridge.send("run_script", {"code": introspect}, timeout=180.0)
     raw = result.get("output", "").strip()
+    tmp_path = Path(raw.splitlines()[-1]) if raw else None
+    if tmp_path is None or not tmp_path.exists():
+        return {"ok": False, "error": "introspection did not return a readable temp file", "raw": raw[:500]}
     try:
-        data = json.loads(raw)
+        data = json.loads(tmp_path.read_text())
     except json.JSONDecodeError as e:
-        return {"ok": False, "error": f"Parse error: {e}", "raw": raw[:500]}
+        return {"ok": False, "error": f"Parse error: {e}"}
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
     entries = [OperatorEntry.model_validate(e) for e in data["operators"]]
     entries.sort(key=lambda e: (e.family, e.python_class))
     catalog = OperatorsCatalog(entries, td_build=data.get("build", ""))
     catalog.save()
     reload_catalog()
+    with_params = sum(1 for e in entries if e.params)
     return {
         "ok": True,
         "count": len(entries),
+        "with_params": with_params,
         "td_build": data.get("build", ""),
         "by_family": catalog.family_counts(),
+        **({"next_step": "kb_index_update folds enriched op chunks into the vector index."}
+           if with_params else {}),
     }
 
 
@@ -587,6 +774,61 @@ async def kb_search(
         "count": len(results),
         "results": results,
     }
+
+
+@mcp.tool()
+async def kb_get_tutorial(video_id: str = "", query: str = "") -> dict:
+    """Fetch EVERY indexed chunk of one tutorial video, ordered by segment —
+    the deterministic complement to kb_search.
+
+    Use this whenever the task is "reproduce this tutorial": semantic search
+    returns the best-matching segments, not all of them, and one missing
+    segment silently breaks a step-by-step rebuild. Returns two ordered
+    lists: `transcript` (raw whisper text, coarse 4-way split — the ground
+    truth for spoken parameter values) and `vision` (per-segment technique
+    extractions with operators/params/connections — richer but occasionally
+    misreads the params panel). On conflict, trust the transcript.
+
+    `video_id`: the 11-char YouTube id (e.g. '4bIQXKJaWlA').
+    `query`: if you don't know the id, a natural-language lookup — returns
+    candidate videos (id + title) to recall this tool with.
+    """
+    import re
+
+    kb = get_vector_kb()
+    if not kb.has_index():
+        return {"ok": False, "error": "Vector index is empty. Run kb_reindex first."}
+
+    if video_id:
+        result = kb.get_video_chunks(video_id)
+        found = bool(result["transcript"] or result["vision"])
+        return {
+            "ok": True,
+            "found": found,
+            **result,
+            **({} if found else {"hint": "No chunks for this id — check kb_youtube_status, or lookup by query."}),
+        }
+
+    if query:
+        hits = kb.search(query, k=15, source="tutorial")
+        candidates: dict[str, dict] = {}
+        for h in hits:
+            m = re.match(r"^(ytv?)_(.+)_(\d+)$", h["id"])
+            if m is None:
+                continue
+            vid = m.group(2)
+            entry = candidates.setdefault(vid, {"video_id": vid, "title": "", "hits": 0})
+            entry["hits"] += 1
+            if not entry["title"]:
+                entry["title"] = h["title"]
+        return {
+            "ok": True,
+            "query": query,
+            "candidates": sorted(candidates.values(), key=lambda c: -c["hits"]),
+            "hint": "Recall kb_get_tutorial with the matching video_id for the full chunk set.",
+        }
+
+    return {"ok": False, "error": "Provide video_id or query."}
 
 
 @mcp.tool()

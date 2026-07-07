@@ -72,6 +72,52 @@ def test_search_without_index_returns_empty(tmp_path: Path):
     assert kb.search("anything") == []
 
 
+def _make_table_without_model(kb: VectorKB, chunks: list[Chunk]) -> None:
+    """Create the chunks table with dummy vectors — get_video_chunks is a
+    filter scan and must be testable without downloading an embedding model."""
+    db = kb._get_db()
+    records = [c.to_record([0.0, 0.0, 0.0, 0.0]) for c in chunks]
+    db.create_table("chunks", data=records)
+
+
+def _video_chunk(chunk_id: str, title: str = "t") -> Chunk:
+    return Chunk(id=chunk_id, source="tutorial", title=title, text=f"body of {chunk_id}")
+
+
+def test_get_video_chunks_orders_and_splits_sources(tmp_path: Path):
+    kb = VectorKB(db_path=tmp_path / "db")
+    _make_table_without_model(kb, [
+        _video_chunk("ytv_4bIQXKJaWlA_02"),
+        _video_chunk("yt_4bIQXKJaWlA_01", title="Point Vortex (part 2/4)"),
+        _video_chunk("ytv_4bIQXKJaWlA_10"),
+        _video_chunk("yt_4bIQXKJaWlA_00", title="Point Vortex (part 1/4)"),
+        _video_chunk("ytv_zzzOTHERvid_01"),  # different video must not leak
+    ])
+    result = kb.get_video_chunks("4bIQXKJaWlA")
+    assert [r["id"] for r in result["transcript"]] == ["yt_4bIQXKJaWlA_00", "yt_4bIQXKJaWlA_01"]
+    assert [r["id"] for r in result["vision"]] == ["ytv_4bIQXKJaWlA_02", "ytv_4bIQXKJaWlA_10"]
+    assert result["title"] == "Point Vortex (part 1/4)"
+    assert all("vector" not in r for r in result["transcript"] + result["vision"])
+
+
+def test_get_video_chunks_underscore_video_id_no_like_bleed(tmp_path: Path):
+    """'_' in a video id is a LIKE single-char wildcard — the exact regex
+    filter must reject near-miss ids that the SQL prefilter lets through."""
+    kb = VectorKB(db_path=tmp_path / "db")
+    _make_table_without_model(kb, [
+        _video_chunk("ytv_1_0O_oceZbU_02"),
+        _video_chunk("ytv_1a0OboceZbU_01"),  # matches LIKE '%1_0O_oceZbU%'? close shape
+    ])
+    result = kb.get_video_chunks("1_0O_oceZbU")
+    assert [r["id"] for r in result["vision"]] == ["ytv_1_0O_oceZbU_02"]
+
+
+def test_get_video_chunks_no_index(tmp_path: Path):
+    kb = VectorKB(db_path=tmp_path / "nope")
+    result = kb.get_video_chunks("whatever")
+    assert result["transcript"] == [] and result["vision"] == []
+
+
 @pytest.mark.skipif(not HEAVY, reason="Heavy: requires embedding model download")
 def test_reindex_and_search_roundtrip(tmp_path: Path):
     """Full integration test — uses MiniLM (~80MB) for speed."""

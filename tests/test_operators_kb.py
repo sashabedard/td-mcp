@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from td_mcp.kb.operators import OperatorEntry, OperatorsCatalog
+from td_mcp.kb.operators import OperatorEntry, OperatorsCatalog, ParamEntry
 
 
 @pytest.fixture
@@ -78,3 +78,78 @@ def test_load_missing_file_returns_empty(tmp_path: Path):
 def test_empty_catalog_suggest_returns_empty():
     cat = OperatorsCatalog([])
     assert cat.suggest("anything") == []
+
+
+# ─────────────────────────── param enrichment ───────────────────────────
+
+
+@pytest.fixture
+def enriched_catalog() -> OperatorsCatalog:
+    return OperatorsCatalog(
+        [
+            OperatorEntry(
+                python_class="selectPOP",
+                family="POP",
+                subtype="select",
+                params=[
+                    ParamEntry(name="pop", label="POP", style="OP"),
+                    ParamEntry(name="pointattrscope", label="Point Attribute Scope", style="Str"),
+                ],
+            ),
+            OperatorEntry(
+                python_class="noisePOP",
+                family="POP",
+                subtype="noise",
+                params=[
+                    ParamEntry(
+                        name="combineentity",
+                        label="Combine Entity",
+                        style="Menu",
+                        menu_names=["noise", "gradient", "curl3d", "curl2d"],
+                    ),
+                    ParamEntry(name="period", label="Period", style="Float"),
+                ],
+            ),
+            OperatorEntry(python_class="bareCHOP", family="CHOP", subtype="bare"),
+        ],
+        td_build="2025.test",
+    )
+
+
+def test_params_roundtrip_save_load(tmp_path: Path, enriched_catalog: OperatorsCatalog):
+    path = tmp_path / "operators.json"
+    enriched_catalog.save(path)
+    loaded = OperatorsCatalog.load(path)
+
+    noise = loaded.get("noisePOP")
+    combineentity = next(p for p in noise.params if p.name == "combineentity")
+    assert combineentity.menu_names == ["noise", "gradient", "curl3d", "curl2d"]
+    assert combineentity.label == "Combine Entity"
+    # Non-enriched entries survive the roundtrip with empty params
+    assert loaded.get("bareCHOP").params == []
+
+
+def test_save_excludes_defaults_for_lean_file(tmp_path: Path, enriched_catalog: OperatorsCatalog):
+    path = tmp_path / "operators.json"
+    enriched_catalog.save(path)
+    payload = json.loads(path.read_text())
+    bare = next(o for o in payload["operators"] if o["python_class"] == "bareCHOP")
+    assert "params" not in bare  # empty default not serialized
+    period = next(
+        p
+        for o in payload["operators"]
+        if o["python_class"] == "noisePOP"
+        for p in o["params"]
+        if p["name"] == "period"
+    )
+    assert "menu_names" not in period  # non-menu param stays lean
+
+
+def test_suggest_params_catches_typo(enriched_catalog: OperatorsCatalog):
+    # The exact miss from the vortex session: guessing 'pops' for selectPOP
+    assert "pop" in enriched_catalog.suggest_params("selectPOP", "pops")
+
+
+def test_suggest_params_unknown_class_or_unenriched(enriched_catalog: OperatorsCatalog):
+    assert enriched_catalog.suggest_params("nopeTOP", "x") == []
+    assert enriched_catalog.suggest_params("bareCHOP", "x") == []

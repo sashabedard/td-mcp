@@ -24,10 +24,28 @@ OpFamily = Literal["CHOP", "TOP", "SOP", "DAT", "COMP", "MAT", "POP"]
 _CATALOG_PATH = Path(__file__).parent / "data" / "operators.json"
 
 
+class ParamEntry(BaseModel):
+    """One settable parameter, introspected from a live instance.
+
+    Captures exactly what an agent needs to call td_set_param without a
+    td_op_info roundtrip: the internal name (case-sensitive), the display
+    label (what tutorials say aloud), the style, and menu tokens (menu
+    params reject anything not in this list).
+    """
+    name: str
+    label: str = ""
+    style: str = ""
+    menu_names: list[str] = []
+
+
 class OperatorEntry(BaseModel):
     python_class: str
     family: OpFamily
     subtype: str = ""
+
+    # Introspected from a live instance by kb_refresh_operators_catalog
+    # (include_params=True). Empty on catalogs built before enrichment.
+    params: list[ParamEntry] = []
 
     # Reserved for Phase 3.6+ enrichment from wiki / Op Snippets:
     name: str = ""
@@ -55,16 +73,30 @@ class OperatorsCatalog:
         for e in self._entries:
             by_family[e.family] = by_family.get(e.family, 0) + 1
         payload = {
-            "version": "1.0",
+            "version": "1.1",
             "td_build": self.td_build,
             "count": len(self._entries),
             "by_family": by_family,
-            "operators": [e.model_dump() for e in self._entries],
+            # exclude_defaults keeps the file lean: param-less entries and
+            # empty menu lists serialize to nothing instead of noise. With
+            # full param enrichment the file is a few MB — acceptable for a
+            # local source of truth that kills live introspection roundtrips.
+            "operators": [e.model_dump(exclude_defaults=True) for e in self._entries],
         }
         path.write_text(json.dumps(payload, indent=2))
 
     def get(self, python_class: str) -> OperatorEntry | None:
         return self._by_class.get(python_class)
+
+    def suggest_params(self, python_class: str, param: str, n: int = 5) -> list[str]:
+        """Close matches for a misspelled param name on a known op class.
+        Empty when the class is unknown or the catalog predates enrichment."""
+        entry = self._by_class.get(python_class)
+        if entry is None or not entry.params:
+            return []
+        return difflib.get_close_matches(
+            param, [p.name for p in entry.params], n=n, cutoff=0.4
+        )
 
     def list(self, family: OpFamily | None = None) -> list[OperatorEntry]:
         if family is None:

@@ -249,6 +249,61 @@ class VectorKB:
             r.pop("vector", None)
         return results
 
+    def get_video_chunks(self, video_id: str) -> dict:
+        """All chunks of one ingested tutorial video, ordered by segment.
+
+        Semantic search cannot guarantee surfacing every chunk of a video —
+        a single missing segment silently breaks a step-by-step rebuild
+        (learned the hard way on the point-vortex tutorial). This is the
+        deterministic complement: filter-scan by chunk id.
+
+        Ids follow the ingestion convention `yt_<video_id>_<nn>` (raw
+        transcript, 4-way split) and `ytv_<video_id>_<nn>` (vision pass,
+        per-segment). YouTube ids may contain `_`, which is a single-char
+        wildcard in SQL LIKE — hence the overfetch + exact regex filter.
+        """
+        import re
+
+        empty = {"video_id": video_id, "title": "", "transcript": [], "vision": []}
+        if not self.has_index():
+            return empty
+
+        table = self._get_db().open_table(TABLE_NAME)
+        safe = video_id.replace("'", "")
+        rows = (
+            table.search()
+            .where(f"id LIKE '%{safe}%'")
+            .select(["id", "source", "source_url", "title", "text",
+                     "operators", "families", "is_glsl", "is_python"])
+            .limit(1000)
+            .to_list()
+        )
+
+        pattern = re.compile(rf"^(ytv?)_{re.escape(video_id)}_(\d+)$")
+        transcript: list[tuple[int, dict]] = []
+        vision: list[tuple[int, dict]] = []
+        for r in rows:
+            m = pattern.match(r["id"])
+            if m is None:
+                continue
+            seg = int(m.group(2))
+            (vision if m.group(1) == "ytv" else transcript).append((seg, r))
+
+        transcript.sort(key=lambda t: t[0])
+        vision.sort(key=lambda t: t[0])
+        title = ""
+        for _, r in transcript + vision:
+            # transcript chunks carry the raw video title; vision chunks a
+            # per-segment technique title — prefer the former.
+            title = r["title"]
+            break
+        return {
+            "video_id": video_id,
+            "title": title,
+            "transcript": [r for _, r in transcript],
+            "vision": [r for _, r in vision],
+        }
+
 
 # Module-level singleton
 _kb: VectorKB | None = None
@@ -283,16 +338,22 @@ def build_seed_chunks() -> list[Chunk]:
     chunks: list[Chunk] = []
 
     for entry in get_catalog().list():
+        text = (
+            f"{entry.family} family operator. "
+            f"Python class: {entry.python_class}. "
+            f"Subtype: {entry.subtype}."
+        )
+        if entry.params:
+            # Param names make "which op has parameter X" queries land on
+            # the right op. Cap keeps the chunk inside embed-friendly size.
+            names = [p.name for p in entry.params][:80]
+            text += f" Parameters: {', '.join(names)}."
         chunks.append(
             Chunk(
                 id=f"op_{entry.python_class}",
                 source="operators",
                 title=f"{entry.python_class} ({entry.family})",
-                text=(
-                    f"{entry.family} family operator. "
-                    f"Python class: {entry.python_class}. "
-                    f"Subtype: {entry.subtype}."
-                ),
+                text=text,
                 operators=[entry.python_class],
                 families=[entry.family],
             )
