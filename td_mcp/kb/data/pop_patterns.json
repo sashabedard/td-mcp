@@ -402,6 +402,99 @@
         "https://www.youtube.com/watch?v=X6RgNdsYMLA (elekktronaut - Particle Collisions with Ray POP, Tutorial 78)"
       ],
       "verified_on_build": "2025.32820"
+    },
+    {
+      "id": "particle_feedback_loop",
+      "name": "Particle POP feedback loop (sim core)",
+      "description": "The canonical POP particle-sim idiom: a point source feeds a particlePOP whose 'Target Feedback Loop POP' (targetpop) points at the null that CLOSES a transform/force chain. Ops inside the loop act per-frame and accumulate (spin, forces); ops wired after the null are stateless post-deform. Verified live rebuilding Okamirufu's Infinite 3D Point Vortex (900k particles @ 0.44ms cook).",
+      "tags": [
+        "particles",
+        "simulation",
+        "feedback",
+        "canonical",
+        "vortex"
+      ],
+      "difficulty": "medium",
+      "ops": [
+        {
+          "name": "pointgen1",
+          "op_type": "pointgeneratorPOP",
+          "params": {
+            "shape": "tube",
+            "distribution": "surface",
+            "orient": "xy",
+            "height": 1
+          }
+        },
+        {
+          "name": "particle1",
+          "op_type": "particlePOP",
+          "params": {
+            "targetpop": "null_sim",
+            "maxparticles": 100000,
+            "birthrate": 20000,
+            "life": 5,
+            "lifevariance": 0.5,
+            "initdrag": 0.4
+          }
+        },
+        {
+          "name": "transform_spin",
+          "op_type": "transformPOP",
+          "params": {
+            "rz": 0.04
+          }
+        },
+        {
+          "name": "forceradial1",
+          "op_type": "forceradialPOP",
+          "params": {
+            "radialstrength": 0.2
+          }
+        },
+        {
+          "name": "null_sim",
+          "op_type": "nullPOP",
+          "params": {}
+        }
+      ],
+      "connections": [
+        {
+          "out": "pointgen1",
+          "into": "particle1",
+          "out_index": 0,
+          "in_index": 0
+        },
+        {
+          "out": "particle1",
+          "into": "transform_spin",
+          "out_index": 0,
+          "in_index": 0
+        },
+        {
+          "out": "transform_spin",
+          "into": "forceradial1",
+          "out_index": 0,
+          "in_index": 0
+        },
+        {
+          "out": "forceradial1",
+          "into": "null_sim",
+          "out_index": 0,
+          "in_index": 0
+        }
+      ],
+      "notes": "targetpop is set by NAME to the loop-closing null. Read the sim result from null_sim (or a selectPOP pointing at it) — anything wired after null_sim is outside the loop and does not accumulate. forceradialPOP emits a PartForce float3 attribute that particlePOP consumes on the next frame to integrate velocity/position. For an infinite-tunnel look, follow with noisePOP (combineentity=curl3d), a transformPOP driven by speedCHOP refs, and a limitPOP with z-axis Loop.",
+      "pitfalls": [
+        "Tapping the render BEFORE null_sim reads pre-force positions — always tap the loop-closing null.",
+        "A transformPOP inside the loop accumulates every frame (rz 0.04 = constant spin); the same transform outside the loop is a static offset.",
+        "Steady-state particle count is min(maxparticles, birthrate*life) — birth 200k with life 5 saturates a 900k cap.",
+        "targetpop referencing a not-yet-created null silently no-ops — set it after the chain exists."
+      ],
+      "references": [
+        "https://www.youtube.com/watch?v=4bIQXKJaWlA"
+      ],
+      "verified_on_build": "2025.32820"
     }
   ]
 }
