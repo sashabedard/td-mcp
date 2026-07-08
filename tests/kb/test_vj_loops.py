@@ -78,11 +78,31 @@ async def test_kb_ingest_vj_corpus_runs_pipeline(tmp_path):
         assert result["report"]["frames_added"] == 40
 
 
-def test_search_attaches_visual_refs_when_table_has_matches():
-    pd = pytest.importorskip("pandas")
-    from unittest.mock import MagicMock, patch
+def _corpus_table_with_one_frame(tmp_path, monkeypatch):
+    """Real LanceDB table in tmp with a single calm frame — no pandas."""
+    from td_mcp.kb import vj_corpus
+
+    real_open = vj_corpus.open_table
+    monkeypatch.setattr(vj_corpus, "open_table", lambda: real_open(db_path=tmp_path / "db"))
+    table = vj_corpus.open_table()
+    table.add([{
+        "id": "f1",
+        "artist": "ouchhh",
+        "frame_path": "/x/f1.png",
+        "energy": "calm",
+        "palette_hex": "#000000",
+        "tempo_estimate": 0.0,
+        "embedding": [0.0] * 512,
+    }])
+    return table
+
+
+def test_search_attaches_visual_refs_when_table_has_matches(tmp_path, monkeypatch):
+    """visual_refs must actually attach — the previous implementation
+    required pandas (not a dependency) and silently returned none."""
     from td_mcp.kb.vj_loops import VJLoopPattern
 
+    _corpus_table_with_one_frame(tmp_path, monkeypatch)
     pattern = VJLoopPattern(
         pattern_name="noise_warp_calm",
         tempo_bpm_range=[60, 90],
@@ -94,13 +114,17 @@ def test_search_attaches_visual_refs_when_table_has_matches():
     )
     kb = VJLoopsKB([pattern])
 
-    fake_df = pd.DataFrame([
-        {"energy": "calm", "frame_path": "/tmp/f1.png", "artist": "ouchhh"},
-    ])
-    fake_table = MagicMock()
-    fake_table.to_pandas.return_value = fake_df
-    with patch("td_mcp.kb.vj_corpus.open_table", return_value=fake_table):
-        results = kb.search("calme", top_k=1, attach_visuals=True)
-        assert len(results) == 1
-        assert len(results[0].visual_refs) == 1
-        assert results[0].visual_refs[0].artist == "ouchhh"
+    results = kb.search("calme", top_k=1, attach_visuals=True)
+    assert len(results) == 1
+    assert len(results[0].visual_refs) == 1
+    assert results[0].visual_refs[0].artist == "ouchhh"
+
+
+def test_search_by_embedding_works_without_pandas(tmp_path, monkeypatch):
+    from td_mcp.kb import vj_corpus
+
+    _corpus_table_with_one_frame(tmp_path, monkeypatch)
+    rows = vj_corpus.search_by_embedding([0.0] * 512, top_k=1)
+    assert len(rows) == 1
+    assert rows[0]["artist"] == "ouchhh"
+    assert "embedding" not in rows[0], "512-float vector must be stripped"

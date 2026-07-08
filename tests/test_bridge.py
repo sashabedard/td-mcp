@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 
 import pytest
 import websockets
@@ -68,6 +69,53 @@ async def test_not_connected_rejects():
     bridge = TDBridge()
     with pytest.raises(TDError, match="Not connected"):
         await bridge.send("get_status")
+
+
+async def test_clean_close_drains_pending_fast_and_marks_disconnected():
+    """A clean WS close (TD quits) must fail in-flight calls immediately —
+    not after the full timeout — and flip `connected` to False."""
+    bridge = TDBridge()
+
+    async def handler(ws):
+        async for _ in ws:
+            await ws.close()  # clean close without answering
+
+    server = await websockets.serve(handler, "127.0.0.1", 0)
+    port = server.sockets[0].getsockname()[1]
+    try:
+        await bridge.connect(f"ws://127.0.0.1:{port}", timeout=5.0)
+        t0 = time.monotonic()
+        with pytest.raises(TDError, match="closed|crashed|Disconnected"):
+            await bridge.send("get_status")
+        assert time.monotonic() - t0 < 2.0, "in-flight call waited out the timeout"
+        await asyncio.sleep(0.05)  # let the reader loop finish
+        assert not bridge.connected
+    finally:
+        await bridge.disconnect()
+        server.close()
+        await server.wait_closed()
+
+
+async def test_send_after_connection_death_raises_tderror():
+    """Once the connection died, send() must raise TDError (the _call
+    contract), never a raw websockets exception."""
+    bridge = TDBridge()
+
+    async def handler(ws):
+        await ws.close()
+
+    server = await websockets.serve(handler, "127.0.0.1", 0)
+    port = server.sockets[0].getsockname()[1]
+    try:
+        await bridge.connect(f"ws://127.0.0.1:{port}", timeout=5.0)
+        await asyncio.sleep(0.1)  # let the close reach the reader loop
+        assert not bridge.connected
+        with pytest.raises(TDError):
+            await bridge.send("get_status")
+    finally:
+        await bridge.disconnect()
+        server.close()
+        await server.wait_closed()
 
 
 async def test_timeout():

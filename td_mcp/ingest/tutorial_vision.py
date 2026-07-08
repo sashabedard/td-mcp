@@ -41,6 +41,7 @@ from pydantic import BaseModel, ValidationError
 
 from td_mcp.ingest.youtube import DEFAULT_CACHE_DIR, VideoMeta, _video_dir
 from td_mcp.kb.vector import Chunk
+from td_mcp.util import write_json_atomic
 
 logger = logging.getLogger(__name__)
 
@@ -277,7 +278,7 @@ def extract_keyframes(
         else:
             raw.unlink()
 
-    manifest_path.write_text(json.dumps([{"t": t, "path": str(p)} for t, p in result], indent=2))
+    write_json_atomic(manifest_path, [{"t": t, "path": str(p)} for t, p in result], indent=2)
     return result
 
 
@@ -503,9 +504,9 @@ def process_video(
                     report["errors"] += 1
                 # write after every completion — a crash loses at most
                 # the in-flight calls, never completed ones
-                tech_path.write_text(json.dumps(existing, indent=2))
+                write_json_atomic(tech_path, existing, indent=2)
 
-    tech_path.write_text(json.dumps(existing, indent=2))
+    write_json_atomic(tech_path, existing, indent=2)
     return report
 
 

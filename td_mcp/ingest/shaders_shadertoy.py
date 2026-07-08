@@ -19,6 +19,7 @@ from typing import Iterator
 import httpx
 
 from td_mcp.kb.vector import Chunk
+from td_mcp.util import write_json_atomic
 
 API_BASE = "https://www.shadertoy.com/api/v1"
 USER_AGENT = "td-mcp/0.0.2 (personal-research; +contact@labai)"
@@ -91,7 +92,7 @@ def fetch_shader(shader_id: str, cache_dir: Path, client: httpx.Client, last: li
     data = _polite_get_json(client, url, last)
     if data is None or "Shader" not in data:
         return None
-    cache_file.write_text(json.dumps(data["Shader"]))
+    write_json_atomic(cache_file, data["Shader"])
     return data["Shader"]
 
 

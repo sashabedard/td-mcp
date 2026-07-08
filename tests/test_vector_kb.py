@@ -52,6 +52,22 @@ def test_seed_chunks_operators_count_matches_catalog():
     assert len(op_chunks) == get_catalog().count
 
 
+def test_seed_chunks_include_shader_sources(monkeypatch):
+    """kb_ingest_geeks3d_shaders / kb_ingest_shadertoy_shaders both tell the
+    user to run kb_reindex afterward — so build_seed_chunks must actually
+    fold the cached shader chunks in."""
+    from td_mcp.ingest import shaders_geeks3d, shaders_shadertoy
+
+    st = Chunk(id="shadertoy_X", source="shader_shadertoy", title="t", text="x", is_glsl=True)
+    g3 = Chunk(id="geeks3d_Y", source="shader_geeks3d", title="t", text="x", is_glsl=True)
+    monkeypatch.setattr(shaders_shadertoy, "build_shadertoy_chunks", lambda *a, **k: iter([st]))
+    monkeypatch.setattr(shaders_geeks3d, "build_geeks3d_chunks", lambda *a, **k: iter([g3]))
+
+    ids = {c.id for c in build_seed_chunks()}
+    assert "shadertoy_X" in ids
+    assert "geeks3d_Y" in ids
+
+
 def test_seed_chunks_pop_pattern_metadata():
     chunks = build_seed_chunks()
     pop_chunks = [c for c in chunks if c.source == "pop_pattern"]

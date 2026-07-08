@@ -28,6 +28,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from td_mcp.kb.vector import Chunk
+from td_mcp.util import write_json_atomic
 
 DEFAULT_CACHE_DIR = Path(
     os.environ.get(
@@ -118,7 +119,7 @@ def download_audio(meta: VideoMeta, channel_handle: str, cache_dir: Path = DEFAU
     meta_path = vdir / "meta.json"
 
     if not meta_path.exists():
-        meta_path.write_text(json.dumps(meta.to_dict(), indent=2))
+        write_json_atomic(meta_path, meta.to_dict(), indent=2)
 
     if audio_path.exists():
         return audio_path
@@ -180,7 +181,7 @@ def transcribe(audio_path: Path, model_name: str = DEFAULT_WHISPER_MODEL) -> dic
             for s in result.get("segments", [])
         ],
     }
-    json_path.write_text(json.dumps(serializable, indent=2))
+    write_json_atomic(json_path, serializable, indent=2)
     return serializable
 
 

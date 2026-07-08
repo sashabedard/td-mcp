@@ -64,6 +64,7 @@ class TDBridge:
         self._pending.clear()
 
     async def _reader_loop(self, ws: ClientConnection) -> None:
+        error: Exception | None = None
         try:
             async for raw in ws:
                 try:
@@ -86,15 +87,29 @@ class TDBridge:
                             err.traceback if err else None,
                         )
                     )
-        except asyncio.CancelledError:
-            pass
         except Exception as e:
-            # Connection died — drain pending. Keep the cause: a bare
-            # "reader crashed" hides actionable failures (payload too big,
-            # connection reset) behind an identical symptom.
+            # Keep the cause: a bare "reader crashed" hides actionable
+            # failures (payload too big, connection reset) behind an
+            # identical symptom.
+            error = e
+        finally:
+            # Reaching here on ANY path — clean close (TD quit), crash, or
+            # cancellation from disconnect() — means this connection is done.
+            # Mark the bridge disconnected and fail in-flight calls now:
+            # letting them wait out their timeout reports "timed out" for
+            # what is really a dead connection. The identity guard keeps a
+            # stale reader from clobbering a newer connection's state.
+            if self._ws is ws:
+                self._ws = None
+                self._reader_task = None
+            msg_text = (
+                f"Bridge reader crashed: {error!r}"
+                if error
+                else "Connection to TouchDesigner closed"
+            )
             for fut in self._pending.values():
                 if not fut.done():
-                    fut.set_exception(TDError(f"Bridge reader crashed: {e!r}"))
+                    fut.set_exception(TDError(msg_text))
             self._pending.clear()
 
     async def send(
@@ -118,6 +133,14 @@ class TDBridge:
         effective_timeout = timeout if timeout is not None else self._timeout
         try:
             await self._ws.send(req.model_dump_json(exclude_none=True))
+        except Exception as e:
+            # Transport failure must honor the TDError contract (_call turns
+            # it into {ok: false}) and must not leak the pending future.
+            self._pending.pop(msg_id, None)
+            raise TDError(
+                f'Failed to send "{action}" — connection to TouchDesigner lost: {e!r}'
+            ) from e
+        try:
             return await asyncio.wait_for(fut, timeout=effective_timeout)
         except asyncio.TimeoutError as e:
             self._pending.pop(msg_id, None)

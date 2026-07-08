@@ -25,6 +25,7 @@ from typing import Iterator
 import httpx
 
 from td_mcp.kb.vector import Chunk
+from td_mcp.util import write_json_atomic
 
 WIKI_API = "https://docs.derivative.ca/api.php"
 WIKI_BASE = "https://docs.derivative.ca"
@@ -262,7 +263,7 @@ def ingest_all_pages(
         if norm not in manifest_data:
             manifest_data[norm] = {"title": title}
             _pages_manifest_path(cache_dir).parent.mkdir(parents=True, exist_ok=True)
-            _pages_manifest_path(cache_dir).write_text(json.dumps(manifest_data, indent=0))
+            write_json_atomic(_pages_manifest_path(cache_dir), manifest_data, indent=0)
         if already:
             cached += 1
         elif text:

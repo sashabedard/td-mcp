@@ -6,11 +6,14 @@ from the ingested CLIP-indexed corpus when available.
 from __future__ import annotations
 
 import json
+import logging
 import re
 from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 _DATA_PATH = Path(__file__).parent / "data" / "vj_loop_patterns.json"
 
@@ -82,20 +85,27 @@ class VJLoopsKB:
         try:
             from td_mcp.kb.vj_corpus import open_table
             table = open_table()
-            df = table.to_pandas()
-            if df.empty:
+            # energy comes from the Energy Literal — safe to inline.
+            rows = (
+                table.search()
+                .where(f"energy = '{pattern.energy}'")
+                .select(["frame_path", "artist"])
+                .limit(top_k_refs)
+                .to_list()
+            )
+            if not rows:
                 return pattern
-            matches = df[df["energy"] == pattern.energy].head(top_k_refs)
             refs = [
-                VisualRef(
-                    frame_path=row["frame_path"],
-                    artist=row["artist"],
-                    similarity=1.0,
-                )
-                for _, row in matches.iterrows()
+                VisualRef(frame_path=r["frame_path"], artist=r["artist"], similarity=1.0)
+                for r in rows
             ]
             return pattern.model_copy(update={"visual_refs": refs})
         except Exception:
+            # Missing/unreadable corpus is a normal state (stage 1 installs),
+            # but log it — a silent swallow here hid a dead feature for weeks.
+            logger.warning(
+                "visual_refs unavailable for %s", pattern.pattern_name, exc_info=True
+            )
             return pattern
 
 

@@ -83,7 +83,9 @@ async def test_td_layout_network_empty_returns_empty_diff():
 
 
 @pytest.mark.asyncio
-async def test_td_layout_network_simple_chain_moves_ops():
+async def test_td_layout_network_simple_chain_moves_ops(tmp_path):
+    import td_mcp.server as server
+
     fake_network = {
         "ops": [
             {"path": "/p/a", "op_type": "constantTOP", "family": "TOP", "x": 999, "y": 999, "name": "a"},
@@ -91,17 +93,80 @@ async def test_td_layout_network_simple_chain_moves_ops():
         ],
         "connections": [{"src": "/p/a", "dst": "/p/b"}],
     }
-    with patch("td_mcp.server.bridge") as fake_bridge:
-        fake_bridge.send = AsyncMock(side_effect=[
-            fake_network,
-            {"checkpoint_id": "cp2"},
-            {"ok": True},
-        ])
-        from td_mcp.server import td_layout_network
-        result = await td_layout_network(path="/p", mode="grid")
+
+    async def fake_send(action, data=None, timeout=None):
+        if action == "get_network":
+            return fake_network
+        if action == "get_project_folder":
+            return {"folder": str(tmp_path)}
+        if action == "checkpoint":
+            return {"comp_path": data["comp_path"], "file_path": data["file_path"]}
+        if action == "apply_layout":
+            return {"ok": True, "applied": {}}
+        raise AssertionError(f"unexpected action {action}")
+
+    server._project_folder_cache = None
+    server._checkpoints.clear()
+    with patch.object(server.bridge, "send", new=AsyncMock(side_effect=fake_send)):
+        result = await server.td_layout_network(path="/p", mode="grid")
         assert result["ok"] is True
         assert len(result["diff"]["moved"]) == 2
-        assert result["diff"]["checkpoint_id"] == "cp2"
+        assert result["diff"]["checkpoint_id"].startswith("cp_")
+
+
+@pytest.mark.asyncio
+async def test_td_layout_network_checkpoint_is_rollbackable(tmp_path):
+    """The checkpoint taken by td_layout_network must be registered so
+    td_rollback(diff.checkpoint_id) actually restores — the docstring
+    promises it."""
+    import td_mcp.server as server
+
+    fake_network = {
+        "ops": [
+            {"path": "/p/a", "op_type": "constantTOP", "family": "TOP", "x": 0, "y": 0, "name": "a"},
+        ],
+        "connections": [],
+    }
+    actions = []
+
+    async def fake_send(action, data=None, timeout=None):
+        actions.append(action)
+        if action == "get_network":
+            return fake_network
+        if action == "get_project_folder":
+            return {"folder": str(tmp_path)}
+        if action == "checkpoint":
+            return {"comp_path": data["comp_path"], "file_path": data["file_path"]}
+        if action == "apply_layout":
+            return {"ok": True, "applied": {}}
+        if action == "rollback":
+            return {"restored_path": data["comp_path"], "file_path": data["file_path"]}
+        raise AssertionError(f"unexpected action {action}")
+
+    server._project_folder_cache = None
+    server._checkpoints.clear()
+    with patch.object(server.bridge, "send", new=AsyncMock(side_effect=fake_send)):
+        result = await server.td_layout_network(path="/p", mode="grid")
+        assert result["ok"] is True
+        cid = result["diff"]["checkpoint_id"]
+        assert cid, "layout must return a usable checkpoint id"
+
+        rollback = await server.td_rollback(cid)
+        assert rollback["ok"] is True, rollback.get("error", "")
+        assert "rollback" in actions
+
+
+@pytest.mark.asyncio
+async def test_td_connect_resets_project_folder_cache():
+    """Reconnecting (possibly to another project) must not reuse the old
+    project's folder for checkpoints."""
+    import td_mcp.server as server
+
+    server._project_folder_cache = "/stale/old-project"
+    with patch.object(server.bridge, "connect", new=AsyncMock()), \
+         patch.object(server, "_sync_bridge_script", new=AsyncMock(return_value={"status": "synced"})):
+        await server.td_connect("ws://127.0.0.1:9988")
+    assert server._project_folder_cache is None
 
 
 def test_detect_clusters_audio_chain_multihop():

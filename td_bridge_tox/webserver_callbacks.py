@@ -233,35 +233,19 @@ def _dispatch(action, data):
         return {'folder': project.folder}
 
     elif action == 'checkpoint':
-        # Two calling conventions:
-        #   (a) label-based whole-project snapshot (layout orchestrator):
-        #       data = {"label": "pre-layout /project1"}
-        #       Returns {"ok": True, "checkpoint_id": "<hex12>", "path": "...", "label": "..."}
-        #   (b) comp-scoped .tox export (td_checkpoint MCP tool):
-        #       data = {"comp_path": "/project1/mycomp", "file_path": "/tmp/..."}
-        #       Returns {"comp_path": ..., "file_path": ...}
-        if 'label' in data and 'comp_path' not in data:
-            # Label-based whole-project checkpoint.
-            import uuid, os
-            label = data.get('label', 'checkpoint')
-            cid = uuid.uuid4().hex[:12]
-            folder = '/tmp/td_mcp_checkpoints'
-            os.makedirs(folder, exist_ok=True)
-            out_path = f'{folder}/{cid}.toe'
-            project.save(out_path)
-            return {'ok': True, 'checkpoint_id': cid, 'path': out_path, 'label': label}
-        else:
-            # Comp-scoped .tox export.
-            comp_path = data['comp_path']
-            file_path = data['file_path']
-            target = op(comp_path)
-            if not target:
-                raise Exception(f'Operator not found: {comp_path}')
-            if not target.isCOMP:
-                raise Exception(f'Checkpoint target must be a COMP: {comp_path} is {target.type}')
-            # comp.save() exports a .tox of just this COMP (children + params)
-            target.save(file_path)
-            return {'comp_path': comp_path, 'file_path': file_path}
+        # Comp-scoped .tox export (td_checkpoint and td_layout_network):
+        #   data = {"comp_path": "/project1/mycomp", "file_path": "/path/x.tox"}
+        #   Returns {"comp_path": ..., "file_path": ...}
+        comp_path = data['comp_path']
+        file_path = data['file_path']
+        target = op(comp_path)
+        if not target:
+            raise Exception(f'Operator not found: {comp_path}')
+        if not target.isCOMP:
+            raise Exception(f'Checkpoint target must be a COMP: {comp_path} is {target.type}')
+        # comp.save() exports a .tox of just this COMP (children + params)
+        target.save(file_path)
+        return {'comp_path': comp_path, 'file_path': file_path}
 
     elif action == 'rollback':
         comp_path = data['comp_path']

@@ -35,7 +35,7 @@
       "tempo_bpm_range": [90, 140],
       "energy": "medium",
       "palette": ["#ff6600", "#000000", "#ffcc00"],
-      "key_operators": ["cacheTOP", "audioCHOP", "selectCHOP", "compositeTOP"],
+      "key_operators": ["cacheTOP", "audiodeviceinCHOP", "selectCHOP", "compositeTOP"],
       "glsl_hint": "sample index driven by audio amplitude along Y axis",
       "description_fr": "Effet slit-scan classique piloté par l'amplitude audio : chaque colonne est échantillonnée à un instant différent selon le signal.",
       "tags": ["audio_reactive", "temporal", "slit_scan", "cinematic"]
@@ -75,7 +75,7 @@
       "tempo_bpm_range": [100, 135],
       "energy": "high",
       "palette": ["#ff0000", "#00ff00", "#0000ff", "#000000"],
-      "key_operators": ["gridSOP", "geometryCOMP", "reorderTOP", "instancingCOMP"],
+      "key_operators": ["gridSOP", "geometryCOMP", "reorderTOP"],
       "glsl_hint": "RGB channel offset per instance column for aberration effect",
       "description_fr": "Grille d'instances colorées avec aberration chromatique par décalage de canaux : rendu techno saturé et vibrant.",
       "tags": ["geometric", "chromatic_aberration", "instancing", "colorful"]
@@ -95,7 +95,7 @@
       "tempo_bpm_range": [80, 120],
       "energy": "medium",
       "palette": ["#ffffff", "#111111", "#00aaff"],
-      "key_operators": ["glslTOP", "noiseCHOP", "blendTOP"],
+      "key_operators": ["glslTOP", "noiseCHOP", "crossTOP"],
       "glsl_hint": "smooth mix between two signed distance functions driven by time",
       "description_fr": "Morphing fluide entre formes primitives via interpolation de SDF en GLSL, transitions douces et sculpturales.",
       "tags": ["sdf", "glsl", "morphing", "geometric"]
@@ -125,7 +125,7 @@
       "tempo_bpm_range": [80, 120],
       "energy": "medium",
       "palette": ["#aaccff", "#001133", "#ffffff"],
-      "key_operators": ["sopToTOP", "renderTOP", "cameraCOMP", "noiseCHOP"],
+      "key_operators": ["soptoPOP", "renderTOP", "cameraCOMP", "noiseCHOP"],
       "glsl_hint": null,
       "description_fr": "Nuage de points en orbite lente autour d'un centre, caméra animée par courbe sinusoïdale, atmosphère spatiale.",
       "tags": ["point_cloud", "3d", "ambient", "spatial"]
@@ -155,7 +155,7 @@
       "tempo_bpm_range": [90, 130],
       "energy": "medium",
       "palette": ["#aaaaaa", "#333333", "#ffffff", "#ccccff"],
-      "key_operators": ["noiseTOP", "displaceTOP", "envMAT", "renderTOP", "sphereSOP"],
+      "key_operators": ["noiseTOP", "displaceTOP", "pbrMAT", "renderTOP", "sphereSOP"],
       "glsl_hint": "high-frequency noise displacement driving environment map reflection lookup",
       "description_fr": "Surface métallique liquide déformée par noise haute fréquence avec réflexion d'environnement, esthétique mercure organique.",
       "tags": ["metal", "reflection", "organic", "3d"]
@@ -185,7 +185,7 @@
       "tempo_bpm_range": [100, 150],
       "energy": "frantic",
       "palette": ["#ff0000", "#00ff00", "#0000ff", "#000000"],
-      "key_operators": ["moviefileinTOP", "feedbackTOP", "compositeTOP", "blendTOP"],
+      "key_operators": ["moviefileinTOP", "feedbackTOP", "compositeTOP", "crossTOP"],
       "glsl_hint": null,
       "description_fr": "Datamoshing vidéo par mélange d'images avec rémanence de mouvement, artefacts de frames intentionnels et corruption chromatique.",
       "tags": ["datamosh", "glitch", "video", "frantic", "corruption"]

@@ -10,14 +10,26 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import subprocess
 import tempfile
-import uuid
 from pathlib import Path
+
+from td_mcp.util import write_json_atomic
 
 logger = logging.getLogger(__name__)
 
 FRAME_INTERVAL_SEC = 2
+
+# Frames referenced by the vj_references table must outlive ingestion —
+# extracting into the run's TemporaryDirectory leaves every persisted
+# frame_path dangling the moment ingest_corpus returns.
+DEFAULT_FRAMES_DIR = Path(
+    os.environ.get(
+        "TD_MCP_VJ_FRAMES",
+        str(Path.home() / ".cache" / "td-mcp" / "vj_frames"),
+    )
+)
 
 
 def download_video(url: str, out_dir: Path) -> Path | None:
@@ -136,8 +148,28 @@ def classify_frame_haiku(frame_path: Path, cache: dict) -> dict:
         return {"energy": "unknown", "palette_hex": [], "error": str(e)}
 
 
-def ingest_corpus(url_list_path: Path, cache_path: Path | None = None) -> dict:
+def _existing_frame_ids(table) -> set[str]:
+    """Ids already in the vj_references table (empty table → empty set)."""
+    try:
+        rows = table.search().select(["id"]).limit(1_000_000).to_list()
+        return {r["id"] for r in rows}
+    except Exception:
+        return set()
+
+
+def ingest_corpus(
+    url_list_path: Path,
+    cache_path: Path | None = None,
+    frames_dir: Path | None = None,
+) -> dict:
     """End-to-end: download → frames → embed → classify → write LanceDB.
+
+    Idempotent: rows are keyed by SHA256 of the frame bytes, so re-running
+    the same URL list skips frames already in the table instead of
+    duplicating them. Frames are copied to `frames_dir` (default
+    ~/.cache/td-mcp/vj_frames) so persisted frame_path values survive the
+    run. The Haiku cache is flushed after every video — a crash keeps the
+    classifications already paid for.
 
     Returns a report dict with counts.
     """
@@ -147,41 +179,70 @@ def ingest_corpus(url_list_path: Path, cache_path: Path | None = None) -> dict:
     cache = json.loads(cache_path.read_text()) if cache_path and cache_path.exists() else {}
 
     table = open_table()
-    report = {"videos_processed": 0, "frames_added": 0, "frames_failed": 0, "videos_failed": 0}
+    existing = _existing_frame_ids(table)
+    frames_root = Path(frames_dir) if frames_dir else DEFAULT_FRAMES_DIR
+    frames_root.mkdir(parents=True, exist_ok=True)
 
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp_path = Path(tmp)
-        for entry in entries:
-            video = download_video(entry["url"], tmp_path)
-            if video is None:
-                report["videos_failed"] += 1
-                continue
-            frames = extract_frames(video, tmp_path)
-            if not frames:
-                report["videos_failed"] += 1
-                continue
-            embeddings = clip_embed_frames(frames)
+    report = {
+        "videos_processed": 0,
+        "frames_added": 0,
+        "frames_skipped": 0,
+        "frames_failed": 0,
+        "videos_failed": 0,
+    }
 
-            records = []
-            for frame, emb in zip(frames, embeddings):
-                cls = classify_frame_haiku(frame, cache)
-                if cls.get("error"):
-                    report["frames_failed"] += 1
+    def _flush_cache() -> None:
+        if cache_path:
+            write_json_atomic(cache_path, cache)
+
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            for i, entry in enumerate(entries):
+                # One directory per entry: a shared dir accumulates every
+                # previous entry's mp4 and download_video's glob would
+                # return an arbitrary one.
+                entry_dir = tmp_path / f"entry_{i:03d}"
+                entry_dir.mkdir()
+                video = download_video(entry["url"], entry_dir)
+                if video is None:
+                    report["videos_failed"] += 1
                     continue
-                records.append({
-                    "id": uuid.uuid4().hex,
-                    "artist": entry["artist"],
-                    "frame_path": str(frame),
-                    "energy": cls["energy"],
-                    "palette_hex": ",".join(cls["palette_hex"]),
-                    "tempo_estimate": 0.0,
-                    "embedding": emb,
-                })
-            if records:
-                table.add(records)
-                report["frames_added"] += len(records)
-            report["videos_processed"] += 1
+                frames = extract_frames(video, entry_dir)
+                if not frames:
+                    report["videos_failed"] += 1
+                    continue
+                embeddings = clip_embed_frames(frames)
 
-    if cache_path:
-        cache_path.write_text(json.dumps(cache))
+                records = []
+                for frame, emb in zip(frames, embeddings):
+                    data = frame.read_bytes()
+                    frame_id = hashlib.sha256(data).hexdigest()
+                    if frame_id in existing:
+                        report["frames_skipped"] += 1
+                        continue
+                    cls = classify_frame_haiku(frame, cache)
+                    if cls.get("error"):
+                        report["frames_failed"] += 1
+                        continue
+                    persisted = frames_root / f"{frame_id}.png"
+                    if not persisted.exists():
+                        persisted.write_bytes(data)
+                    records.append({
+                        "id": frame_id,
+                        "artist": entry["artist"],
+                        "frame_path": str(persisted),
+                        "energy": cls["energy"],
+                        "palette_hex": ",".join(cls["palette_hex"]),
+                        "tempo_estimate": 0.0,
+                        "embedding": emb,
+                    })
+                    existing.add(frame_id)
+                if records:
+                    table.add(records)
+                    report["frames_added"] += len(records)
+                report["videos_processed"] += 1
+                _flush_cache()
+    finally:
+        _flush_cache()
     return report

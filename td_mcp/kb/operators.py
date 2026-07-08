@@ -19,6 +19,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from td_mcp.util import write_json_atomic
+
 OpFamily = Literal["CHOP", "TOP", "SOP", "DAT", "COMP", "MAT", "POP"]
 
 _CATALOG_PATH = Path(__file__).parent / "data" / "operators.json"
@@ -83,7 +85,7 @@ class OperatorsCatalog:
             # local source of truth that kills live introspection roundtrips.
             "operators": [e.model_dump(exclude_defaults=True) for e in self._entries],
         }
-        path.write_text(json.dumps(payload, indent=2))
+        write_json_atomic(path, payload, indent=2)
 
     def get(self, python_class: str) -> OperatorEntry | None:
         return self._by_class.get(python_class)

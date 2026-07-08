@@ -82,8 +82,13 @@ async def td_connect(
     The TD side must have the td_mcp_bridge .tox loaded with a WebServer DAT
     on the matching port (default 9988), and the matching token if set.
     """
+    global _project_folder_cache
     try:
         await bridge.connect(url, token=token, timeout=timeout)
+        # New connection may be a different project (or the same project
+        # reopened elsewhere) — a stale folder would send checkpoints to
+        # the old project's directory.
+        _project_folder_cache = None
         sync = await _sync_bridge_script()
         return {"ok": True, "url": url, "connected": True, "bridge_sync": sync}
     except Exception as e:
@@ -250,7 +255,6 @@ async def td_plan(
 def _plan_gate() -> dict:
     """Warning fields to merge into td_create_op responses (soft gate)."""
     global _plan_gaps_warned
-    import os
 
     if _session_plan is None:
         return {
@@ -434,22 +438,13 @@ async def td_snapshot(op_path: str) -> Image:
 # ─────────────────────────── checkpoint / rollback ─────────────────────────
 
 
-@mcp.tool()
-async def td_checkpoint(comp_path: str, label: str = "") -> dict:
-    """Export a COMP to a timestamped .tox snapshot for later rollback.
-
-    The .tox file is written to <td_project_folder>/.td_mcp_snapshots/<id>.tox.
-    FIFO at 20 checkpoints per session: older snapshots are deleted from disk.
-
-    LIMITATIONS:
-    - Target must be a COMP (any family), not a leaf op.
-    - Cannot checkpoint root (/project1) — wrap your experiment in a COMP first.
-    - External wires entering or leaving the COMP are NOT preserved on rollback,
-      because TD's loadTox replaces the operator entirely.
-    """
+async def _take_checkpoint(comp_path: str, label: str) -> dict:
+    """Comp-scoped .tox checkpoint, registered in _checkpoints so
+    td_rollback can restore it. Shared by td_checkpoint and
+    td_layout_network."""
     folder = Path(await _get_project_folder())
     cp_dir = folder / ".td_mcp_snapshots"
-    cp_dir.mkdir(exist_ok=True)
+    cp_dir.mkdir(parents=True, exist_ok=True)
     cp_id = f"cp_{int(time.time() * 1000)}_{uuid.uuid4().hex[:6]}"
     file_path = str(cp_dir / f"{cp_id}.tox")
 
@@ -475,6 +470,22 @@ async def td_checkpoint(comp_path: str, label: str = "") -> dict:
             pass
 
     return {"ok": True, **entry}
+
+
+@mcp.tool()
+async def td_checkpoint(comp_path: str, label: str = "") -> dict:
+    """Export a COMP to a timestamped .tox snapshot for later rollback.
+
+    The .tox file is written to <td_project_folder>/.td_mcp_snapshots/<id>.tox.
+    FIFO at 20 checkpoints per session: older snapshots are deleted from disk.
+
+    LIMITATIONS:
+    - Target must be a COMP (any family), not a leaf op.
+    - Cannot checkpoint root (/project1) — wrap your experiment in a COMP first.
+    - External wires entering or leaving the COMP are NOT preserved on rollback,
+      because TD's loadTox replaces the operator entirely.
+    """
+    return await _take_checkpoint(comp_path, label)
 
 
 @mcp.tool()
@@ -977,9 +988,13 @@ async def kb_promote_pop_pattern(pattern: dict) -> dict:
     if get_pop_kb().get(validated.id) is not None:
         return {"ok": False, "error": f"pattern id {validated.id!r} already exists"}
 
+    from td_mcp.util import write_json_atomic
+
     data = _json.loads(_DATA_PATH.read_text())
     data["patterns"].append(validated.model_dump())
-    _DATA_PATH.write_text(_json.dumps(data, indent=2, ensure_ascii=False))
+    # Atomic: this file is the hand-curated source of truth — a crash
+    # mid-write must not corrupt it.
+    write_json_atomic(_DATA_PATH, data, indent=2)
     reset_pop_kb_singleton()
     return {"ok": True, "id": validated.id, "total_patterns": len(data["patterns"]),
             "next_step": "kb_index_update to fold the new pattern chunk into the index."}
@@ -1236,7 +1251,7 @@ async def kb_get_vj_loop_reference(query: str = "", top_k: int = 3) -> dict:
 
 
 @mcp.tool()
-async def td_layout_network(path: str = "/", mode: str = "grid_annotated") -> dict:
+async def td_layout_network(path: str = "/project1", mode: str = "grid_annotated") -> dict:
     """Reorganize a TD network: topological grid, optional cluster annotations
     and semantic renaming of generic ops.
 
@@ -1244,8 +1259,10 @@ async def td_layout_network(path: str = "/", mode: str = "grid_annotated") -> di
     - "grid": geometric grid only (move ops on a column-by-family grid)
     - "grid_annotated": grid + cluster Annotate COMPs + generic-name renaming
 
-    Creates a checkpoint before applying changes. Returns a diff with the
-    checkpoint id so changes can be rolled back via td_rollback.
+    Takes a comp-scoped .tox checkpoint of `path` before applying changes;
+    the returned diff carries its checkpoint id for td_rollback. `path`
+    must therefore be a COMP below root (like td_checkpoint) — laying out
+    "/" directly is not supported.
     """
     if mode not in ("grid", "grid_annotated"):
         return {"ok": False, "error": f"unknown mode '{mode}'"}
@@ -1310,10 +1327,10 @@ async def td_layout_network(path: str = "/", mode: str = "grid_annotated") -> di
                     reason=f"generic name + upstream {upstream_types_by_op[o['path']]}",
                 ))
 
-    ckpt = await _call("checkpoint", label=f"pre-layout {path}")
+    ckpt = await _take_checkpoint(path, label=f"pre-layout {path}")
     if not ckpt.get("ok"):
         return ckpt
-    checkpoint_id = ckpt.get("checkpoint_id", "")
+    checkpoint_id = ckpt.get("id", "")
 
     apply_payload = {
         "moves": [m.model_dump() for m in moved],

@@ -55,12 +55,12 @@
     {
       "look": "lumablur_bloom",
       "operator_chain": [
-        {"op_type": "lumaLevelTOP", "role": "isolate highlights", "notes": "lift black point to isolate brights"},
+        {"op_type": "lumalevelTOP", "role": "isolate highlights", "notes": "lift black point to isolate brights"},
         {"op_type": "blurTOP", "role": "soften", "notes": "wide radius, multi-pass"},
         {"op_type": "compositeTOP", "role": "add to original", "notes": "operand=add"}
       ],
       "param_values": {
-        "lumaLevelTOP": {"blacklevel": 0.7, "whitelevel": 1.0},
+        "lumalevelTOP": {"blacklevel": 0.7, "whitelevel": 1.0},
         "blurTOP": {"size": 32.0, "passes": 3},
         "compositeTOP": {"operand": "add"}
       },
@@ -73,13 +73,13 @@
     {
       "look": "anamorphic_flare",
       "operator_chain": [
-        {"op_type": "lumaLevelTOP", "role": "isolate specular hotspots", "notes": "high blacklevel extracts lens flare sources"},
+        {"op_type": "lumalevelTOP", "role": "isolate specular hotspots", "notes": "high blacklevel extracts lens flare sources"},
         {"op_type": "transformTOP", "role": "squeeze vertically", "notes": "scale Y < 1 to simulate anamorphic squeeze on the flare layer"},
         {"op_type": "blurTOP", "role": "horizontal streak", "notes": "set blur direction to horizontal only, large X radius"},
         {"op_type": "compositeTOP", "role": "composite streak over original", "notes": "operand=add or screen"}
       ],
       "param_values": {
-        "lumaLevelTOP": {"blacklevel": 0.85, "whitelevel": 1.0},
+        "lumalevelTOP": {"blacklevel": 0.85, "whitelevel": 1.0},
         "transformTOP": {"sy": 0.15, "sx": 1.0},
         "blurTOP": {"size": 64.0, "passes": 2, "dirx": 1.0, "diry": 0.0},
         "compositeTOP": {"operand": "add"}

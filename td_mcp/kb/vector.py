@@ -405,4 +405,13 @@ def build_seed_chunks() -> list[Chunk]:
 
     chunks.extend(build_vision_chunks())
 
+    # Shader chunks from cache (kb_ingest_geeks3d_shaders /
+    # kb_ingest_shadertoy_shaders populate; both point the user at
+    # kb_reindex, so they MUST be folded in here).
+    from td_mcp.ingest.shaders_geeks3d import build_geeks3d_chunks
+    from td_mcp.ingest.shaders_shadertoy import build_shadertoy_chunks
+
+    chunks.extend(build_geeks3d_chunks())
+    chunks.extend(build_shadertoy_chunks())
+
     return chunks

@@ -21,6 +21,7 @@ from typing import Iterator
 import httpx
 
 from td_mcp.kb.vector import Chunk
+from td_mcp.util import write_json_atomic
 
 INDEX_URL = "https://www.geeks3d.com/shader-library/"
 USER_AGENT = "td-mcp/0.0.2 (personal-research; +contact@labai)"
@@ -125,7 +126,7 @@ def fetch_article(url: str, cache_dir: Path, client: httpx.Client, last: list[fl
         "title": _extract_title(html_text),
         "text": _extract_text_and_code(html_text),
     }
-    cache_file.write_text(json.dumps(record))
+    write_json_atomic(cache_file, record)
     return record
 
 
