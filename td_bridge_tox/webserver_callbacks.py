@@ -80,8 +80,25 @@ def _dispatch(action, data):
         buf = io.StringIO()
         old_stdout = sys.stdout
         sys.stdout = buf
+        # Exec in a COPY of our globals: a bare exec(code) uses _dispatch's
+        # locals, so functions the script defines can't see the script's own
+        # top-level names (NameError on any helper call). The copy keeps
+        # op/root/project visible while protecting the bridge's namespace
+        # from whatever the script rebinds.
+        ns = dict(globals())
         try:
-            exec(code)
+            exec(code, ns)
+        except Exception as e:
+            partial = buf.getvalue()
+            if partial:
+                # The output up to the failure says how far the script got —
+                # discarding it turns "failed at op 13/15" into a blind error.
+                raise RuntimeError(
+                    '{}: {} | partial output before failure:\n{}'.format(
+                        type(e).__name__, e, partial[-2000:]
+                    )
+                )
+            raise
         finally:
             sys.stdout = old_stdout
         return {'output': buf.getvalue()}

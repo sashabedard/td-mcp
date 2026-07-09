@@ -150,13 +150,12 @@
       "look": "chromatic_aberration_subtle",
       "operator_chain": [
         {"op_type": "reorderTOP", "role": "split into RGB channels", "notes": "output separate R, G, B planes for independent offset"},
-        {"op_type": "transformTOP", "role": "offset red channel outward", "notes": "small translate on R channel away from center"},
-        {"op_type": "transformTOP", "role": "offset blue channel inward", "notes": "small opposite translate on B channel toward center"},
+        {"op_type": "transformTOP", "role": "offset red channel outward", "notes": "small translate on R channel away from center", "params": {"tx": 0.003, "ty": 0.001}},
+        {"op_type": "transformTOP", "role": "offset blue channel inward", "notes": "small opposite translate on B channel toward center", "params": {"tx": -0.003, "ty": -0.001}},
         {"op_type": "reorderTOP", "role": "recombine channels", "notes": "merge offset R, original G, offset B back to RGB"}
       ],
       "param_values": {
-        "reorderTOP": {"chanr": 0, "chang": 1, "chanb": 2, "chana": 3},
-        "transformTOP": {"tx": 0.003, "ty": 0.001}
+        "reorderTOP": {"chanr": 0, "chang": 1, "chanb": 2, "chana": 3}
       },
       "common_pitfalls": [
         "Offset is in UV space (0–1 range) — values above 0.01 look like a glitch, not a lens aberration",

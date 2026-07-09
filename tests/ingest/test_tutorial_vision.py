@@ -217,3 +217,95 @@ def test_process_video_resumes_from_techniques(tmp_path):
     ex.assert_not_called()
     assert report["ok"] is True
     assert report["skipped_cached"] == 1
+
+
+# ─────────────────────────── keyframe extraction resilience ─────────────────
+
+from unittest.mock import patch  # noqa: E402
+
+import pytest  # noqa: E402
+
+
+def _failing_ffmpeg(cmd, **kwargs):
+    class R:
+        returncode = 1
+        stderr = "moov atom not found"
+        stdout = ""
+    return R()
+
+
+def test_extract_keyframes_failed_ffmpeg_is_not_cached(tmp_path):
+    """An ffmpeg failure (corrupt video) must not persist an empty manifest
+    — otherwise every later run short-circuits on it and the video is
+    never retried."""
+    from td_mcp.ingest.tutorial_vision import extract_keyframes
+
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"truncated")
+    out_dir = tmp_path / "frames"
+
+    with patch("td_mcp.ingest.tutorial_vision.subprocess.run", side_effect=_failing_ffmpeg):
+        result = extract_keyframes(video, out_dir)
+    assert result == []
+    assert not (out_dir / "keyframes.json").exists(), "empty result cached permanently"
+
+
+def test_extract_keyframes_ignores_cached_empty_manifest(tmp_path):
+    """Legacy caches may already hold an empty manifest — treat it as
+    absent and retry the extraction."""
+    import json as _json
+
+    from td_mcp.ingest.tutorial_vision import extract_keyframes
+
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"truncated")
+    out_dir = tmp_path / "frames"
+    out_dir.mkdir()
+    (out_dir / "keyframes.json").write_text(_json.dumps([]))
+
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        return _failing_ffmpeg(cmd)
+
+    with patch("td_mcp.ingest.tutorial_vision.subprocess.run", side_effect=fake_run):
+        extract_keyframes(video, out_dir)
+    assert calls, "empty cached manifest short-circuited the retry"
+
+
+@pytest.mark.asyncio
+async def test_vision_tool_limit_caps_attempts_not_successes(tmp_path, monkeypatch):
+    """limit must bound ATTEMPTS: a cache full of failing videos otherwise
+    gets fully re-walked (and re-billed) on every call. limit=0 means all,
+    consistent with kb_ingest_youtube_channel."""
+    import json as _json
+    import sys
+    import types
+
+    from td_mcp import server
+
+    for vid in ("v1", "v2", "v3"):
+        vdir = tmp_path / "chan" / vid
+        vdir.mkdir(parents=True)
+        (vdir / "meta.json").write_text(_json.dumps({
+            "video_id": vid, "title": vid, "duration_sec": 10.0,
+            "channel": "chan", "url": f"https://youtu.be/{vid}",
+        }))
+        (vdir / "transcript.json").write_text("{}")
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "fake")
+    monkeypatch.setattr("td_mcp.ingest.youtube.DEFAULT_CACHE_DIR", tmp_path)
+    monkeypatch.setitem(sys.modules, "anthropic", types.ModuleType("anthropic"))
+
+    attempts = []
+
+    def failing_process(meta, chan, model=None):
+        attempts.append(meta.video_id)
+        return {"ok": False, "error": "no keyframes"}
+
+    with patch("td_mcp.ingest.tutorial_vision.process_video", side_effect=failing_process), \
+         patch("td_mcp.ingest.tutorial_vision.manifest", return_value={}):
+        await server.kb_ingest_tutorial_vision(limit=1)
+
+    assert len(attempts) == 1, f"limit=1 attempted {len(attempts)} videos"

@@ -1,9 +1,10 @@
+import asyncio
 import base64
 import json
 import time
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, get_args
 
 from mcp.server.fastmcp import FastMCP, Image
 
@@ -15,7 +16,7 @@ from td_mcp.kb.vj_loops import get_vj_loops_kb
 from td_mcp.kb.glsl import get_glsl_kb
 from td_mcp.kb.operators import OperatorEntry, OperatorsCatalog, get_catalog, reload_catalog
 from td_mcp.kb.pop_patterns import get_pop_kb
-from td_mcp.kb.vector import build_seed_chunks, get_vector_kb
+from td_mcp.kb.vector import ChunkSource, build_seed_chunks, get_vector_kb
 from td_mcp.protocol import AnnotationSpec, LayoutDiff, OperatorPosition, OperatorRename, TDError
 from td_mcp.tools.layout import (
     assign_columns_by_depth,
@@ -25,6 +26,9 @@ from td_mcp.tools.layout import (
 )
 
 mcp = FastMCP("td-mcp")
+
+VALID_FAMILIES = ("CHOP", "TOP", "SOP", "DAT", "COMP", "MAT", "POP")
+VALID_SOURCES = get_args(ChunkSource)
 
 # Per-process checkpoint registry. FIFO at MAX_CHECKPOINTS. .tox files survive
 # server restarts on disk; the in-memory list does not — restart-safe listing
@@ -253,9 +257,12 @@ async def td_plan(
 
 
 def _plan_gate() -> dict:
-    """Warning fields to merge into td_create_op responses (soft gate)."""
-    global _plan_gaps_warned
+    """Warning fields to merge into td_create_op responses (soft gate).
 
+    Pure computation — the caller flips the one-shot flag via
+    _mark_gap_warning_delivered() ONLY when the warning is actually
+    attached to a response, otherwise an early return (catalog rejection)
+    burns the flag and the warning is never seen."""
     if _session_plan is None:
         return {
             "plan_warning": (
@@ -265,7 +272,6 @@ def _plan_gate() -> dict:
             )
         }
     if _session_plan["gaps"] and not _plan_gaps_warned:
-        _plan_gaps_warned = True
         return {
             "plan_warning": (
                 f"Plan has {len(_session_plan['gaps'])} unresolved gap(s): "
@@ -274,6 +280,18 @@ def _plan_gate() -> dict:
             )
         }
     return {}
+
+
+def _mark_gap_warning_delivered() -> None:
+    global _plan_gaps_warned
+    if _session_plan is not None and _session_plan["gaps"]:
+        _plan_gaps_warned = True
+
+
+def _require_plan() -> bool:
+    import os
+
+    return os.environ.get("TD_MCP_REQUIRE_PLAN", "").strip().lower() in ("1", "true", "yes")
 
 
 @mcp.tool()
@@ -294,15 +312,15 @@ async def td_create_op(
     Expects a session plan registered via td_plan — creates without one
     succeed but carry a `plan_warning` (hard error if TD_MCP_REQUIRE_PLAN=1).
     """
-    import os
-
     gate = _plan_gate()
-    if gate and _session_plan is None and os.environ.get("TD_MCP_REQUIRE_PLAN"):
+    if gate and _session_plan is None and _require_plan():
         return {"ok": False, "error": gate["plan_warning"]}
 
     catalog = get_catalog()
     if not catalog.is_empty:
         if catalog.get(op_type) is None:
+            if gate:
+                _mark_gap_warning_delivered()
             return {
                 "ok": False,
                 "error": f"Unknown operator class: {op_type!r}",
@@ -311,9 +329,11 @@ async def td_create_op(
                     "Use kb_list_operators(family=...) to browse, or "
                     "kb_refresh_operators_catalog if the catalog is stale."
                 ),
+                **gate,
             }
     result = await _call("create_op", type=op_type, parent=parent, name=name, x=x, y=y)
-    if result.get("ok") and gate:
+    if gate:
+        _mark_gap_warning_delivered()
         return {**result, **gate}
     return result
 
@@ -520,6 +540,14 @@ async def kb_list_operators(family: str | None = None, limit: int = 50, offset: 
     size, offset paginates (next page: offset += returned); full counts are
     always reported in `total` and `total_in_family`.
     """
+    if family is not None:
+        family = family.upper()
+        if family not in VALID_FAMILIES:
+            return {
+                "ok": False,
+                "error": f"Unknown family: {family!r}",
+                "valid_families": list(VALID_FAMILIES),
+            }
     catalog = get_catalog()
     if catalog.is_empty:
         return {
@@ -772,13 +800,31 @@ async def kb_search(
     an empty result. The embedding model loads lazily on first call (BGE-M3
     default ~2GB download once; override via TD_MCP_EMBEDDING_MODEL).
     """
+    if source is not None and source not in VALID_SOURCES:
+        return {
+            "ok": False,
+            "error": f"Unknown source: {source!r}",
+            "valid_sources": list(VALID_SOURCES),
+        }
+    if family is not None:
+        family = family.upper()
+        if family not in VALID_FAMILIES:
+            return {
+                "ok": False,
+                "error": f"Unknown family: {family!r}",
+                "valid_families": list(VALID_FAMILIES),
+            }
     kb = get_vector_kb()
     if not kb.has_index():
         return {
             "ok": False,
             "error": "Vector index is empty. Run kb_reindex to build it from the seed sources.",
         }
-    results = kb.search(query, k=k, source=source, family=family, is_glsl=is_glsl)
+    # to_thread: query embedding is seconds of synchronous CPU — running it
+    # on the event loop freezes every other tool AND the bridge reader.
+    results = await asyncio.to_thread(
+        kb.search, query, k=k, source=source, family=family, is_glsl=is_glsl
+    )
     return {
         "ok": True,
         "query": query,
@@ -821,7 +867,7 @@ async def kb_get_tutorial(video_id: str = "", query: str = "") -> dict:
         }
 
     if query:
-        hits = kb.search(query, k=15, source="tutorial")
+        hits = await asyncio.to_thread(kb.search, query, k=15, source="tutorial")
         candidates: dict[str, dict] = {}
         for h in hits:
             m = re.match(r"^(ytv?)_(.+)_(\d+)$", h["id"])
@@ -852,7 +898,9 @@ async def kb_reindex() -> dict:
     chunks = build_seed_chunks()
     if not chunks:
         return {"ok": False, "error": "No chunks to index — KBs appear empty."}
-    result = kb.reindex(chunks)
+    # to_thread: ~15 min of synchronous embedding would otherwise freeze
+    # the whole MCP server, including the TD bridge reader.
+    result = await asyncio.to_thread(kb.reindex, chunks)
     return {"ok": True, **result}
 
 
@@ -867,7 +915,7 @@ async def kb_index_update() -> dict:
     chunks = build_seed_chunks()
     if not chunks:
         return {"ok": False, "error": "No chunks to index — KBs appear empty."}
-    return {"ok": True, **kb.upsert(chunks)}
+    return {"ok": True, **(await asyncio.to_thread(kb.upsert, chunks))}
 
 
 @mcp.tool()
@@ -1101,10 +1149,17 @@ async def kb_ingest_youtube_channel(
 
     use_model = model or DEFAULT_WHISPER_MODEL
     processed = []
+    failed = []
     for v in videos:
-        audio = download_audio(v, handle)
-        transcribe(audio, model_name=use_model)
-        processed.append({"video_id": v.video_id, "title": v.title, "duration_sec": v.duration_sec})
+        # One private/deleted/region-locked video must not abort the batch.
+        try:
+            audio = download_audio(v, handle)
+            transcribe(audio, model_name=use_model)
+            processed.append(
+                {"video_id": v.video_id, "title": v.title, "duration_sec": v.duration_sec}
+            )
+        except Exception as e:
+            failed.append({"video_id": v.video_id, "title": v.title, "error": str(e)})
 
     return {
         "ok": True,
@@ -1112,6 +1167,8 @@ async def kb_ingest_youtube_channel(
         "model": use_model,
         "processed_count": len(processed),
         "processed": processed,
+        "failed_count": len(failed),
+        "failed": failed,
         "cache": manifest(),
         "next_step": "Call kb_reindex to fold tutorial chunks into the vector store.",
     }
@@ -1134,9 +1191,12 @@ async def kb_ingest_tutorial_vision(
     anthropic). Operates ONLY on videos already in the youtube cache
     with a transcript — run kb_ingest_youtube_channel first.
 
-    `video_id` targets one video; otherwise processes up to `limit`
-    transcribed videos (of `handle`, or any channel). Resumable:
-    segments already extracted are skipped, errored ones retried.
+    `video_id` targets one video; otherwise attempts up to `limit`
+    transcribed videos (of `handle`, or any channel) — failures count
+    toward the limit, so a cache of broken videos is not re-billed
+    endlessly. limit=0 means all (like kb_ingest_youtube_channel).
+    Resumable: segments already extracted are skipped, errored ones
+    retried.
 
     Does NOT reindex — call kb_reindex afterward.
     """
@@ -1182,14 +1242,16 @@ async def kb_ingest_tutorial_vision(
 
     use_model = model or DEFAULT_VISION_MODEL
     reports = []
-    processed = 0
+    attempts = 0
     for meta, chan in candidates:
-        if not video_id and processed >= max(1, limit):
+        # Attempts (not successes) count toward the limit: bounding on
+        # successes makes a cache full of failing videos re-run — and
+        # re-bill — every candidate on every call.
+        if not video_id and limit > 0 and attempts >= limit:
             break
+        attempts += 1
         report = process_video(meta, chan, model=use_model)
         reports.append({"video_id": meta.video_id, "title": meta.title, **report})
-        if report.get("ok"):
-            processed += 1
 
     return {
         "ok": True,

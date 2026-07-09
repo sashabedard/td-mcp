@@ -57,3 +57,20 @@ def test_all_literal_looks_have_recipes():
     kb = get_cinematic_kb()
     for look in get_args(CinematicLook):
         assert kb.get(look) is not None, f"missing recipe for {look}"
+
+
+def test_chromatic_aberration_transforms_carry_opposite_offsets():
+    """param_values keyed by op_type cannot express two transformTOPs with
+    OPPOSITE offsets (the recipe's own pitfall demands it) — per-step
+    params can. Applied mechanically, identical offsets shift R and B
+    together: no aberration at all."""
+    from td_mcp.kb.cinematic import CinematicKB
+
+    recipe = CinematicKB.load().get("chromatic_aberration_subtle")
+    transforms = [s for s in recipe.operator_chain if s.op_type == "transformTOP"]
+    assert len(transforms) == 2
+    tx = [s.params.get("tx") for s in transforms]
+    ty = [s.params.get("ty") for s in transforms]
+    assert None not in tx and None not in ty, "per-step offsets missing"
+    assert tx[0] == -tx[1] and tx[0] != 0
+    assert ty[0] == -ty[1]

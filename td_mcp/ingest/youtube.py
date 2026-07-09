@@ -87,7 +87,9 @@ def list_channel_videos(channel_url: str, limit: int | None = None) -> list[Vide
         cmd.extend(["--playlist-end", str(limit)])
     cmd.append(channel_url)
 
-    out = subprocess.check_output(cmd, text=True, stderr=subprocess.DEVNULL)
+    # timeout: a hung yt-dlp (network stall, interactive cookie prompt)
+    # otherwise blocks the MCP server indefinitely.
+    out = subprocess.check_output(cmd, text=True, stderr=subprocess.DEVNULL, timeout=120)
     videos = []
     for line in out.strip().splitlines():
         parts = line.split(SEP, 4)
@@ -111,8 +113,20 @@ def _safe_handle(handle: str) -> str:
     return handle.lstrip("@").replace("/", "_")
 
 
+def _cached_audio(vdir: Path) -> Path | None:
+    """Complete cached audio file, whatever the extension. Partial
+    downloads (.part, .ytdl) don't count."""
+    for candidate in sorted(vdir.glob("audio.*")):
+        if candidate.suffix in (".part", ".ytdl", ".tmp"):
+            continue
+        return candidate
+    return None
+
+
 def download_audio(meta: VideoMeta, channel_handle: str, cache_dir: Path = DEFAULT_CACHE_DIR) -> Path:
-    """Download bestaudio as m4a. Skip if already cached."""
+    """Download bestaudio as m4a. Skip if already cached — including when
+    yt-dlp fell back to another container (.webm): resume must not hit the
+    network for every non-m4a video on every run."""
     vdir = _video_dir(channel_handle, meta.video_id, cache_dir)
     vdir.mkdir(parents=True, exist_ok=True)
     audio_path = vdir / "audio.m4a"
@@ -121,8 +135,9 @@ def download_audio(meta: VideoMeta, channel_handle: str, cache_dir: Path = DEFAU
     if not meta_path.exists():
         write_json_atomic(meta_path, meta.to_dict(), indent=2)
 
-    if audio_path.exists():
-        return audio_path
+    cached = _cached_audio(vdir)
+    if cached is not None:
+        return cached
 
     cmd = ["yt-dlp", "--quiet"]
     if YTDLP_COOKIES_BROWSER:
@@ -136,14 +151,11 @@ def download_audio(meta: VideoMeta, channel_handle: str, cache_dir: Path = DEFAU
         str(audio_path).replace(".m4a", ".%(ext)s"),
         meta.url,
     ]
-    subprocess.check_call(cmd, stderr=subprocess.DEVNULL)
+    subprocess.check_call(cmd, stderr=subprocess.DEVNULL, timeout=1800)
 
-    # yt-dlp may write a different extension if m4a isn't available
-    if not audio_path.exists():
-        candidates = list(vdir.glob("audio.*"))
-        if candidates:
-            return candidates[0]
-    return audio_path
+    # yt-dlp may have written a different extension if m4a wasn't available
+    cached = _cached_audio(vdir)
+    return cached if cached is not None else audio_path
 
 
 def transcribe(audio_path: Path, model_name: str = DEFAULT_WHISPER_MODEL) -> dict:

@@ -113,13 +113,13 @@ class VectorKB:
         return [v.tolist() for v in vecs]
 
     def has_index(self) -> bool:
+        """False when the index simply doesn't exist yet. Real failures
+        (corrupted table, permissions, version skew) PROPAGATE — masking
+        them as "empty" sends callers into a pointless full reindex."""
         if not self.db_path.exists():
             return False
-        try:
-            db = self._get_db()
-            return TABLE_NAME in db.list_tables().tables
-        except Exception:
-            return False
+        db = self._get_db()
+        return TABLE_NAME in db.list_tables().tables
 
     def count(self) -> int:
         if not self.has_index():
@@ -166,42 +166,75 @@ class VectorKB:
             "path": str(self.db_path),
         }
 
+    _RECORD_FIELDS = [
+        "id", "source", "source_url", "title", "text",
+        "operators", "families", "is_glsl", "is_python",
+    ]
+
     def upsert(self, chunks: list[Chunk]) -> dict:
         """Incremental index update: embed and add ONLY chunks that are new
-        or whose text changed. A full reindex embeds everything (~15 min at
-        3k chunks); upsert makes folding fresh knowledge near-free.
+        or changed. A full reindex embeds everything (~15 min at 3k
+        chunks); upsert makes folding fresh knowledge near-free.
+
+        Change detection covers the whole record (title, metadata), not
+        just text — the embedded vector is title+text, so a title-only
+        change must re-embed. Ids present in the table but absent from the
+        new chunk set are PURGED, scoped to the sources present in the new
+        set: a re-segmented video drops its stale chunks, while a source
+        whose cache isn't on this machine is left untouched.
 
         Falls back to reindex() when no table exists yet.
         """
         if not chunks:
-            return {"added": 0, "updated": 0, "unchanged": 0, "total": self.count()}
+            return {"added": 0, "updated": 0, "unchanged": 0, "removed": 0,
+                    "total": self.count()}
         if not self.has_index():
             r = self.reindex(chunks)
-            return {"added": r["indexed"], "updated": 0, "unchanged": 0, "total": r["indexed"]}
+            return {"added": r["indexed"], "updated": 0, "unchanged": 0,
+                    "removed": 0, "total": r["indexed"]}
 
         table = self._get_db().open_table(TABLE_NAME)
         existing = {
-            row["id"]: row["text"]
-            for row in table.search().select(["id", "text"]).limit(1_000_000).to_list()
+            row["id"]: row
+            for row in table.search().select(self._RECORD_FIELDS).limit(1_000_000).to_list()
         }
+
+        def comparable(c: Chunk) -> dict:
+            rec = c.to_record([])
+            rec.pop("vector", None)
+            return rec
 
         to_add: list[Chunk] = []
         to_update: list[Chunk] = []
         unchanged = 0
+        new_ids: set[str] = set()
+        sources_present: set[str] = set()
         for c in chunks:
+            new_ids.add(c.id)
+            sources_present.add(c.source)
             prior = existing.get(c.id)
             if prior is None:
                 to_add.append(c)
-            elif prior != c.text:
+            elif {k: prior[k] for k in self._RECORD_FIELDS} != comparable(c):
                 to_update.append(c)
             else:
                 unchanged += 1
 
+        orphans = [
+            row_id for row_id, row in existing.items()
+            if row["source"] in sources_present and row_id not in new_ids
+        ]
+
+        def sql_ids(ids: list[str]) -> str:
+            return ",".join("'{}'".format(i.replace("'", "''")) for i in ids)
+
+        if orphans:
+            table.delete(f"id IN ({sql_ids(orphans)})")
+
         pending = to_add + to_update
         if pending:
             if to_update:
-                ids = ",".join(f"'{c.id}'" for c in to_update)
-                table.delete(f"id IN ({ids})")
+                table.delete(f"id IN ({sql_ids([c.id for c in to_update])})")
             # embed+add in slices: bounded memory, and a crash mid-run keeps
             # every completed slice (the next upsert resumes on the rest)
             slice_size = 256
@@ -214,6 +247,7 @@ class VectorKB:
             "added": len(to_add),
             "updated": len(to_update),
             "unchanged": unchanged,
+            "removed": len(orphans),
             "total": table.count_rows(),
         }
 

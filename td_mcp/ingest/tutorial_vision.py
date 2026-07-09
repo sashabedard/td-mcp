@@ -223,7 +223,12 @@ def extract_keyframes(
     manifest_path = out_dir / "keyframes.json"
     if manifest_path.exists():
         entries = json.loads(manifest_path.read_text())
-        return [(e["t"], Path(e["path"])) for e in entries]
+        if entries:
+            return [(e["t"], Path(e["path"])) for e in entries]
+        # An empty manifest is a cached FAILURE (corrupt video, dead
+        # ffmpeg run) — treat it as absent so the extraction is retried,
+        # like errored VLM segments are.
+        manifest_path.unlink()
 
     out_dir.mkdir(parents=True, exist_ok=True)
     raw_pattern = out_dir / "raw_%05d.png"
@@ -236,6 +241,10 @@ def extract_keyframes(
             ],
             capture_output=True, text=True, timeout=1800,
         )
+        if proc.returncode != 0:
+            logger.warning("ffmpeg scene detection failed for %s: %s",
+                           video, (proc.stderr or "")[-300:])
+            return []
         times = parse_showinfo_times(proc.stderr)
     except (subprocess.TimeoutExpired, FileNotFoundError) as e:
         logger.warning("scene detection failed for %s: %s", video, e)
@@ -260,6 +269,10 @@ def extract_keyframes(
                 ],
                 capture_output=True, text=True, timeout=1800,
             )
+            if proc.returncode != 0:
+                logger.warning("ffmpeg interval sampling failed for %s: %s",
+                               video, (proc.stderr or "")[-300:])
+                return []
             times = parse_showinfo_times(proc.stderr)
         except (subprocess.TimeoutExpired, FileNotFoundError) as e:
             logger.warning("interval sampling failed for %s: %s", video, e)
@@ -278,7 +291,10 @@ def extract_keyframes(
         else:
             raw.unlink()
 
-    write_json_atomic(manifest_path, [{"t": t, "path": str(p)} for t, p in result], indent=2)
+    # Only persist a NON-empty result: an empty manifest would be read as
+    # "nothing to extract" forever instead of "extraction failed, retry".
+    if result:
+        write_json_atomic(manifest_path, [{"t": t, "path": str(p)} for t, p in result], indent=2)
     return result
 
 

@@ -88,12 +88,26 @@ class WikiClient:
             time.sleep(self.min_interval - elapsed)
         self._last_request_at = time.monotonic()
 
+    def _get_with_retry(self, url: str, **kwargs) -> httpx.Response:
+        """Throttled GET, retried once on transient failures (5xx, timeout,
+        connection error) — the docstring's promise, now real. A second
+        failure propagates: retrying more would hide real outages."""
+        self._throttle()
+        try:
+            r = self._client.get(url, **kwargs)
+            if r.status_code < 500:
+                return r
+        except httpx.TransportError:
+            pass
+        time.sleep(max(self.min_interval, 1.0))
+        self._throttle()
+        return self._client.get(url, **kwargs)
+
     def list_category(self, category_title: str) -> list[str]:
         """Return all canonical page titles in a category (paginated)."""
         titles: list[str] = []
         cont: dict = {}
         while True:
-            self._throttle()
             params = {
                 "action": "query",
                 "list": "categorymembers",
@@ -103,7 +117,7 @@ class WikiClient:
                 "format": "json",
                 **cont,
             }
-            r = self._client.get(WIKI_API, params=params)
+            r = self._get_with_retry(WIKI_API, params=params)
             r.raise_for_status()
             data = r.json()
             for m in data.get("query", {}).get("categorymembers", []):
@@ -119,7 +133,6 @@ class WikiClient:
         titles: list[str] = []
         cont: dict = {}
         while True:
-            self._throttle()
             params = {
                 "action": "query",
                 "list": "allpages",
@@ -128,7 +141,7 @@ class WikiClient:
                 "format": "json",
                 **cont,
             }
-            r = self._client.get(WIKI_API, params=params)
+            r = self._get_with_retry(WIKI_API, params=params)
             r.raise_for_status()
             data = r.json()
             for m in data.get("query", {}).get("allpages", []):
@@ -148,11 +161,10 @@ class WikiClient:
         if cache_file.exists():
             return cache_file.read_text()
 
-        self._throttle()
         # Convert title to wiki slug (spaces → underscores) for URL fetch
         slug = title.replace(" ", "_")
         url = f"{WIKI_BASE}/{slug}"
-        r = self._client.get(url)
+        r = self._get_with_retry(url)
         if r.status_code != 200:
             return ""
 
@@ -252,18 +264,42 @@ def ingest_all_pages(
     titles = client.enumerate_all_pages()
     manifest_data = _load_pages_manifest(cache_dir)
 
-    fetched, cached, empty = 0, 0, 0
+    fetched, cached, empty, errors, collisions = 0, 0, 0, 0, 0
+    manifest_dirty = False
+
+    def _flush_manifest() -> None:
+        nonlocal manifest_dirty
+        _pages_manifest_path(cache_dir).parent.mkdir(parents=True, exist_ok=True)
+        write_json_atomic(_pages_manifest_path(cache_dir), manifest_data, indent=0)
+        manifest_dirty = False
+
     for title in titles:
         norm = _normalize(title)
+        prior = manifest_data.get(norm)
+        if prior is not None and prior.get("title") != title:
+            # Two distinct wiki titles normalize to the same cache key —
+            # the second would silently reuse the first's cached text.
+            # Count it so the loss is visible instead of invisible.
+            collisions += 1
+            continue
         cache_file = cache_dir / f"{norm}.txt"
         already = cache_file.exists()
         if not already and limit is not None and fetched >= limit:
             continue
-        text = client.fetch_page_text(title)
+        try:
+            text = client.fetch_page_text(title)
+        except Exception:
+            # One failure surviving the retry must not abort a 300-fetch
+            # run — the cache keeps everything fetched so far.
+            errors += 1
+            continue
         if norm not in manifest_data:
             manifest_data[norm] = {"title": title}
-            _pages_manifest_path(cache_dir).parent.mkdir(parents=True, exist_ok=True)
-            write_json_atomic(_pages_manifest_path(cache_dir), manifest_data, indent=0)
+            manifest_dirty = True
+            # Persist every 25 new titles instead of on each one: same
+            # crash-resilience order of magnitude, 25x fewer full rewrites.
+            if fetched % 25 == 0:
+                _flush_manifest()
         if already:
             cached += 1
         elif text:
@@ -271,12 +307,17 @@ def ingest_all_pages(
         else:
             empty += 1
 
+    if manifest_dirty:
+        _flush_manifest()
+
     return {
         "total_titles": len(titles),
         "fetched_new": fetched,
         "already_cached": cached,
         "empty_or_failed": empty,
-        "remaining": len(titles) - fetched - cached - empty,
+        "errors": errors,
+        "collisions": collisions,
+        "remaining": len(titles) - fetched - cached - empty - errors - collisions,
     }
 
 

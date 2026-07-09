@@ -31,11 +31,19 @@ class OperatorStep(BaseModel):
     op_type: str
     role: str
     notes: str = ""
+    # Per-step values — takes precedence over param_values[op_type] when
+    # applying the recipe. Needed whenever a chain uses the same op class
+    # twice with different settings (e.g. chromatic aberration's two
+    # transformTOPs with OPPOSITE offsets), which the class-keyed
+    # param_values dict cannot express.
+    params: dict[str, float | int | str | bool] = {}
 
 
 class CinematicRecipe(BaseModel):
     look: CinematicLook
     operator_chain: list[OperatorStep]
+    # Class-keyed defaults; ambiguous when a class appears twice in the
+    # chain — per-step `params` wins in that case.
     param_values: dict[str, dict[str, float | int | str | bool]]
     common_pitfalls: list[str] = []
     example_screenshot_url: str | None = None

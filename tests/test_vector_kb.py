@@ -163,3 +163,94 @@ def test_reindex_and_search_roundtrip(tmp_path: Path):
     # Filter by source
     only_ops = kb.search("audio", k=10, source="operators")
     assert all(h["source"] == "operators" for h in only_ops)
+
+
+# ─────────────────────────── upsert correctness ──────────────────────────────
+
+
+def _fake_embed(kb: VectorKB) -> None:
+    kb._embed = lambda texts, batch_size=8: [[0.0, 0.0, 0.0, 0.0] for _ in texts]
+
+
+def test_upsert_detects_title_change(tmp_path: Path):
+    """The embedded vector is title+text — a title-only change must be
+    re-embedded, not counted 'unchanged' with the stale title kept."""
+    kb = VectorKB(db_path=tmp_path / "db")
+    _make_table_without_model(kb, [
+        Chunk(id="x", source="tutorial", title="old title", text="same body"),
+    ])
+    _fake_embed(kb)
+
+    report = kb.upsert([Chunk(id="x", source="tutorial", title="new title", text="same body")])
+    assert report["updated"] == 1
+    rows = kb._get_db().open_table("chunks").search().select(["id", "title"]).limit(10).to_list()
+    assert rows[0]["title"] == "new title"
+
+
+def test_upsert_purges_orphans_of_present_sources_only(tmp_path: Path):
+    """Re-segmenting a video 6→4 chunks must drop the stale _04/_05 rows
+    (kb_get_tutorial promises EVERY chunk, ordered — mixing segmentations
+    breaks step-by-step rebuilds). Sources absent from the new chunk set
+    (e.g. wiki cache not on this machine) must NOT be purged."""
+    kb = VectorKB(db_path=tmp_path / "db")
+    _make_table_without_model(kb, [
+        *[_video_chunk(f"yt_vid_{i:02d}") for i in range(6)],
+        Chunk(id="op_noiseCHOP", source="operators", title="noiseCHOP", text="op"),
+    ])
+    _fake_embed(kb)
+
+    new_chunks = [
+        Chunk(id=f"yt_vid_{i:02d}", source="tutorial", title="t", text=f"body of yt_vid_{i:02d}")
+        for i in range(4)
+    ]
+    report = kb.upsert(new_chunks)
+    assert report["removed"] == 2, "stale tutorial chunks not purged"
+
+    ids = {r["id"] for r in kb._get_db().open_table("chunks").search()
+           .select(["id"]).limit(100).to_list()}
+    assert "yt_vid_04" not in ids and "yt_vid_05" not in ids
+    assert "op_noiseCHOP" in ids, "absent source wrongly purged"
+
+
+def test_has_index_propagates_real_errors(tmp_path: Path):
+    """A corrupted/unreadable index must surface its real error — reporting
+    'index is empty' sends the agent into a pointless 15-min reindex."""
+    kb = VectorKB(db_path=tmp_path / "db")
+    (tmp_path / "db").mkdir()
+
+    def boom():
+        raise RuntimeError("lance table corrupted")
+
+    kb._get_db = boom
+    with pytest.raises(RuntimeError, match="corrupted"):
+        kb.has_index()
+
+
+# ─────────────────────────── server-side filter validation ──────────────────
+
+
+@pytest.mark.asyncio
+async def test_kb_search_rejects_unknown_source_with_valid_values():
+    from td_mcp import server
+
+    result = await server.kb_search("noise", source="tutorials")  # typo: plural
+    assert result["ok"] is False
+    assert "tutorial" in str(result.get("valid_sources", "")), result
+
+
+@pytest.mark.asyncio
+async def test_kb_list_operators_normalizes_family_case():
+    from td_mcp import server
+
+    result = await server.kb_list_operators(family="chop")
+    assert result["ok"] is True
+    assert result["total_in_family"] > 0, "lowercase family silently matched nothing"
+
+
+@pytest.mark.asyncio
+async def test_kb_list_operators_rejects_unknown_family():
+    from td_mcp import server
+
+    result = await server.kb_list_operators(family="CHOPS")
+    assert result["ok"] is False
+    assert "CHOP" in str(result.get("valid_families", ""))

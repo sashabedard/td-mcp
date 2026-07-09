@@ -98,3 +98,81 @@ def test_build_chunks_from_cache_with_fake_transcript(tmp_path: Path):
     assert "abc123" in chunks[0].source_url
     assert "00:00" in chunks[0].title
     assert "gridPOP" in chunks[0].text
+
+
+# ─────────────────────────── batch resilience ───────────────────────────────
+
+from unittest.mock import AsyncMock, patch  # noqa: E402
+
+import pytest  # noqa: E402
+
+from td_mcp.ingest.youtube import VideoMeta, download_audio  # noqa: E402
+
+
+def _meta(vid="abc123", title="t"):
+    return VideoMeta(vid, title, 60.0, "chan", f"https://youtu.be/{vid}")
+
+
+def test_download_audio_resumes_from_non_m4a(tmp_path: Path):
+    """bestaudio may land as .webm — a cached .webm must short-circuit,
+    not trigger a fresh network download on every run."""
+    vdir = tmp_path / "chan" / "abc123"
+    vdir.mkdir(parents=True)
+    (vdir / "audio.webm").write_bytes(b"audio")
+
+    with patch("td_mcp.ingest.youtube.subprocess") as sp:
+        sp.run.side_effect = AssertionError("network hit for cached audio")
+        sp.check_call.side_effect = AssertionError("network hit for cached audio")
+        result = download_audio(_meta(), "chan", cache_dir=tmp_path)
+    assert result.name == "audio.webm"
+
+
+def test_download_audio_ignores_partial_files(tmp_path: Path):
+    """A leftover audio.m4a.part must NOT count as cached audio."""
+    vdir = tmp_path / "chan" / "abc123"
+    vdir.mkdir(parents=True)
+    (vdir / "audio.m4a.part").write_bytes(b"partial")
+
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        (vdir / "audio.m4a").write_bytes(b"audio")
+
+        class R:
+            returncode = 0
+        return R()
+
+    with patch("td_mcp.ingest.youtube.subprocess.run", side_effect=fake_run), \
+         patch("td_mcp.ingest.youtube.subprocess.check_call", side_effect=lambda cmd, **k: fake_run(cmd)):
+        result = download_audio(_meta(), "chan", cache_dir=tmp_path)
+    assert calls, "partial file wrongly treated as cached audio"
+    assert result.name == "audio.m4a"
+
+
+@pytest.mark.asyncio
+async def test_ingest_channel_batch_survives_one_bad_video(monkeypatch):
+    """One private/deleted video must not abort the whole batch."""
+    import subprocess
+
+    from td_mcp import server
+
+    videos = [_meta("good1", "ok"), _meta("dead2", "private"), _meta("good3", "ok")]
+
+    def fake_download(meta, handle, cache_dir=None):
+        if meta.video_id == "dead2":
+            raise subprocess.CalledProcessError(1, "yt-dlp")
+        return Path(f"/tmp/{meta.video_id}/audio.m4a")
+
+    sources = {"channels": [{"handle": "chan", "url": "https://youtube.com/@chan"}]}
+    with patch("td_mcp.ingest.youtube.load_sources", return_value=sources), \
+         patch("td_mcp.ingest.youtube.list_channel_videos", return_value=videos), \
+         patch("td_mcp.ingest.youtube.download_audio", side_effect=fake_download), \
+         patch("td_mcp.ingest.youtube.transcribe", return_value={"text": ""}), \
+         patch("td_mcp.ingest.youtube.manifest", return_value={}):
+        result = await server.kb_ingest_youtube_channel(handle="chan", limit=0)
+
+    assert result["ok"] is True
+    assert result["processed_count"] == 2
+    assert result["failed_count"] == 1
+    assert result["failed"][0]["video_id"] == "dead2"

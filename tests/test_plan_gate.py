@@ -87,6 +87,31 @@ async def test_create_with_plan_no_warning():
 
 
 @pytest.mark.asyncio
+async def test_gap_warning_survives_a_catalog_rejected_create():
+    """A create rejected by the catalog gate must still SHOW the one-shot
+    gaps warning — computing it and silently discarding it burns the flag
+    and the warning is never seen by anyone."""
+    from td_mcp import server
+
+    await server.td_plan("build", STAGES, gaps=["missing chunk"])
+    with patch.object(server, "_call", new=AsyncMock(return_value={"ok": True, "path": "/p/n1"})):
+        rejected = await server.td_create_op("noiseCHOPP")  # typo → catalog rejection
+        assert rejected["ok"] is False
+        assert "plan_warning" in rejected, "gap warning silently discarded"
+
+
+@pytest.mark.asyncio
+async def test_require_plan_env_zero_means_disabled(monkeypatch):
+    from td_mcp import server
+
+    monkeypatch.setenv("TD_MCP_REQUIRE_PLAN", "0")
+    with patch.object(server, "_call", new=AsyncMock(return_value={"ok": True, "path": "/p/n1"})):
+        result = await server.td_create_op("noiseCHOP")
+    assert result["ok"] is True, "TD_MCP_REQUIRE_PLAN=0 must not enable the hard gate"
+    assert "plan_warning" in result
+
+
+@pytest.mark.asyncio
 async def test_unresolved_gaps_warn_once_then_stay_quiet():
     from td_mcp import server
 

@@ -130,3 +130,72 @@ def test_split_text_hard_caps_giant_paragraphs():
     pieces = split_text(giant.strip(), max_words=700)
     assert all(len(p.split()) <= 700 * 1.35 for p in pieces)
     assert sum(len(p.split()) for p in pieces) == 5000
+
+
+# ─────────────────────────── resilience ─────────────────────────────────────
+
+import httpx  # noqa: E402
+
+
+class _FlakyTransport(httpx.BaseTransport):
+    """Fails the first request with a 503, succeeds afterwards."""
+
+    def __init__(self):
+        self.calls = 0
+
+    def handle_request(self, request):
+        self.calls += 1
+        if self.calls == 1:
+            return httpx.Response(503, text="Service Unavailable")
+        return httpx.Response(
+            200,
+            json={"query": {"allpages": [{"title": "Noise CHOP"}]}, },
+        )
+
+
+def test_wiki_client_retries_once_on_transient_error(tmp_path: Path):
+    """The module docstring promises 'retries once on transient errors' —
+    a single 503 must not abort a 300-request run."""
+    from td_mcp.ingest.wiki import WikiClient
+
+    client = WikiClient(cache_dir=tmp_path, min_interval=0.0)
+    transport = _FlakyTransport()
+    client._client = httpx.Client(transport=transport)
+    titles = client.enumerate_all_pages()
+    assert titles == ["Noise CHOP"]
+    assert transport.calls == 2
+
+
+def test_ingest_all_pages_survives_a_failing_page(tmp_path: Path):
+    """One page erroring mid-run must be counted, not fatal."""
+    from unittest.mock import MagicMock
+
+    from td_mcp.ingest.wiki import ingest_all_pages
+
+    client = MagicMock()
+    client.enumerate_all_pages.return_value = ["Good Page", "Bad Page", "Also Good"]
+
+    def fetch(title):
+        if title == "Bad Page":
+            raise httpx.ConnectError("boom")
+        return f"text of {title}"
+
+    client.fetch_page_text.side_effect = fetch
+    report = ingest_all_pages(client, cache_dir=tmp_path)
+    assert report["fetched_new"] == 2
+    assert report["errors"] == 1
+
+
+def test_ingest_all_pages_flags_normalize_collisions(tmp_path: Path):
+    """Two distinct titles normalizing to the same cache key silently drop
+    a page — the collision must at least be counted and visible."""
+    from unittest.mock import MagicMock
+
+    from td_mcp.ingest.wiki import ingest_all_pages
+
+    client = MagicMock()
+    client.enumerate_all_pages.return_value = ["Palette:Kinect", "Palette Kinect"]
+    client.fetch_page_text.side_effect = lambda title: f"text of {title}"
+
+    report = ingest_all_pages(client, cache_dir=tmp_path)
+    assert report["collisions"] == 1
