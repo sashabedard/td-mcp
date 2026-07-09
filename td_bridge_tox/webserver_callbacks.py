@@ -2,10 +2,27 @@ import json
 import io
 import sys
 import traceback
+from pathlib import Path
 
-# Set to a non-empty string to require token authentication.
-# Leave empty to allow all local connections (default for local dev).
+# Set to a non-empty string to force a specific token.
+# Leave empty to use the same-machine token file below (recommended):
+# td_connect creates ~/.cache/td-mcp/bridge_token on first use and sends
+# its content with every message. Once that file exists, messages without
+# the matching token are rejected — the WebServer DAT listens on the
+# network, and without this anyone on the LAN could reach eval/exec.
 SHARED_SECRET = ''
+TOKEN_FILE = Path.home() / '.cache' / 'td-mcp' / 'bridge_token'
+
+
+def _shared_secret():
+    if SHARED_SECRET:
+        return SHARED_SECRET
+    try:
+        return TOKEN_FILE.read_text().strip()
+    except Exception:
+        # No token file yet (the MCP server never connected on this
+        # machine) — local dev fallback, enforcement starts with the file.
+        return ''
 
 
 def onWebSocketReceiveText(webServerDAT, client, data):
@@ -20,7 +37,8 @@ def onWebSocketReceiveText(webServerDAT, client, data):
     payload = msg.get('data', {})
     token = msg.get('token', '')
 
-    if SHARED_SECRET and token != SHARED_SECRET:
+    secret = _shared_secret()
+    if secret and token != secret:
         _send(webServerDAT, client, msg_id, False, error='Unauthorized')
         return
 
@@ -354,8 +372,8 @@ def _family_of(o):
 
 
 def onWebSocketOpen(webServerDAT, client, data):
-    print(f'[td-bridge] Client connected')
+    print('[td-bridge] Client connected')
 
 
 def onWebSocketClose(webServerDAT, client):
-    print(f'[td-bridge] Client disconnected')
+    print('[td-bridge] Client disconnected')

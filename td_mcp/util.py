@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -31,3 +32,27 @@ def write_json_atomic(path: Path, obj: Any, indent: int | None = None) -> None:
         except FileNotFoundError:
             pass
         raise
+
+
+def get_bridge_token() -> str:
+    """Same-machine shared secret for the TD bridge, created on first use.
+
+    Both sides read the same file: td_connect sends its content as the WS
+    token, and the TD-side callbacks require it once the file exists. A
+    LAN attacker can reach the WebServer DAT's port but not this file —
+    which is what keeps eval/exec off the open network. Override the
+    location with TD_MCP_TOKEN_FILE."""
+    path = Path(
+        os.environ.get(
+            "TD_MCP_TOKEN_FILE",
+            str(Path.home() / ".cache" / "td-mcp" / "bridge_token"),
+        )
+    )
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(secrets.token_hex(16))
+        try:
+            path.chmod(0o600)
+        except OSError:
+            pass  # e.g. some Windows filesystems
+    return path.read_text().strip()

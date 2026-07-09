@@ -102,11 +102,11 @@ def test_build_chunks_from_cache_with_fake_transcript(tmp_path: Path):
 
 # ─────────────────────────── batch resilience ───────────────────────────────
 
-from unittest.mock import AsyncMock, patch  # noqa: E402
+from unittest.mock import patch  # noqa: E402
 
 import pytest  # noqa: E402
 
-from td_mcp.ingest.youtube import VideoMeta, download_audio  # noqa: E402
+from td_mcp.ingest.youtube import download_audio  # noqa: E402
 
 
 def _meta(vid="abc123", title="t"):

@@ -26,3 +26,14 @@ def test_write_json_atomic_indent(tmp_path):
     target = tmp_path / "data.json"
     write_json_atomic(target, {"a": 1}, indent=2)
     assert "\n" in target.read_text()
+
+
+def test_bridge_token_created_once_and_stable(tmp_path, monkeypatch):
+    from td_mcp.util import get_bridge_token
+
+    monkeypatch.setenv("TD_MCP_TOKEN_FILE", str(tmp_path / "bridge_token"))
+    t1 = get_bridge_token()
+    t2 = get_bridge_token()
+    assert t1 == t2
+    assert len(t1) >= 32
+    assert (tmp_path / "bridge_token").read_text().strip() == t1

@@ -84,11 +84,16 @@ async def td_connect(
     """Open the WebSocket bridge to a running TouchDesigner instance.
 
     The TD side must have the td_mcp_bridge .tox loaded with a WebServer DAT
-    on the matching port (default 9988), and the matching token if set.
+    on the matching port (default 9988). Auth: unless an explicit `token`
+    is given, the same-machine token file (~/.cache/td-mcp/bridge_token)
+    is created/read and sent with every message — the TD-side callbacks
+    require it once the file exists.
     """
+    from td_mcp.util import get_bridge_token
+
     global _project_folder_cache
     try:
-        await bridge.connect(url, token=token, timeout=timeout)
+        await bridge.connect(url, token=token or get_bridge_token(), timeout=timeout)
         # New connection may be a different project (or the same project
         # reopened elsewhere) — a stale folder would send checkpoints to
         # the old project's directory.
@@ -99,17 +104,24 @@ async def td_connect(
         return {"ok": False, "error": str(e)}
 
 
-def _bridge_script() -> tuple[str, str, str] | None:
-    """(text, sha256, path) of the repo's bridge script, or None outside a
-    source checkout (wheel installs don't ship td_bridge_tox/)."""
-    import hashlib
-    from pathlib import Path
+# Source checkout first, then the copy hatch force-includes into the wheel
+# (see pyproject) so bridge sync also works on pip-installed servers.
+_BRIDGE_SCRIPT_CANDIDATES = [
+    Path(__file__).parent.parent / "td_bridge_tox" / "webserver_callbacks.py",
+    Path(__file__).parent / "_bridge" / "webserver_callbacks.py",
+]
 
-    path = Path(__file__).parent.parent / "td_bridge_tox" / "webserver_callbacks.py"
-    if not path.exists():
-        return None
-    text = path.read_text(encoding="utf-8")
-    return text, hashlib.sha256(text.strip().encode("utf-8")).hexdigest(), str(path)
+
+def _bridge_script() -> tuple[str, str, str] | None:
+    """(text, sha256, path) of the bridge script, or None if no copy is
+    found (neither checkout nor package data)."""
+    import hashlib
+
+    for path in _BRIDGE_SCRIPT_CANDIDATES:
+        if path.exists():
+            text = path.read_text(encoding="utf-8")
+            return text, hashlib.sha256(text.strip().encode("utf-8")).hexdigest(), str(path)
+    return None
 
 
 async def _sync_bridge_script() -> dict:

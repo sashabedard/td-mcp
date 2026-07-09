@@ -61,3 +61,21 @@ async def test_sync_fails_gracefully_when_no_dat_found():
     with patch.object(server, "_call", new=fake_call):
         result = await server._sync_bridge_script()
     assert result["status"] == "failed"
+
+
+def test_bridge_script_falls_back_to_packaged_copy(tmp_path, monkeypatch):
+    """Wheel installs don't ship td_bridge_tox/ — the script must resolve
+    from the package-data copy so bridge sync works outside a checkout."""
+    from td_mcp import server
+
+    repo_copy = tmp_path / "repo" / "webserver_callbacks.py"
+    packaged_copy = tmp_path / "pkg" / "webserver_callbacks.py"
+    packaged_copy.parent.mkdir(parents=True)
+    packaged_copy.write_text("def onWebSocketReceiveText(): pass\n")
+
+    monkeypatch.setattr(server, "_BRIDGE_SCRIPT_CANDIDATES", [repo_copy, packaged_copy])
+    result = server._bridge_script()
+    assert result is not None
+    text, sha, path = result
+    assert path == str(packaged_copy)
+    assert "onWebSocketReceiveText" in text

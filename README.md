@@ -1,16 +1,14 @@
 # td-mcp
 
-TouchDesigner MCP server — live bridge to a running TD instance, typed knowledge base, dedicated POP support, vibe-coding loop with screenshots and checkpoints.
-
-Status: **early scaffolding (Phase 0 / Phase 1 in progress)**.
+TouchDesigner MCP server — live bridge to a running TD instance, typed knowledge base (operators catalog, POP patterns, GLSL templates, cinematic recipes), semantic search over ingested tutorials/wiki/shaders, and a build loop with plans, screenshots and checkpoints.
 
 ## Architecture
 
 Three layers:
 
-1. **Live Bridge** — async WebSocket client to a `WebServer DAT` running inside TouchDesigner (companion `.tox` in `td_bridge_tox/`). JSON protocol: `{id, action, data, token?}` ↔ `{id, ok, result|error}`.
-2. **Knowledge** — LanceDB-backed structured operators table + hybrid vector chunks (BGE-M3 embeddings), with dedicated POP and GLSL TOP sub-KBs. *(Phase 3+)*
-3. **Agent Loop** — vibe mode (default, short loop with screenshot checkpoints) and rigorous mode (opt-in, typed plans with validation). *(Phase 6+)*
+1. **Live Bridge** — async WebSocket client to a `WebServer DAT` running inside TouchDesigner (companion `.tox` in `td_bridge_tox/`). JSON protocol: `{id, action, data, token?}` ↔ `{id, ok, result|error}`. The server detects bridge-script drift on connect and repairs the DAT automatically (`bridge_version` hash check).
+2. **Knowledge** — typed sub-KBs (operators catalog introspected from TD with full param schemas, curated POP patterns, GLSL TOP templates, cinematic look recipes, VJ loop patterns) plus a LanceDB vector index (BGE-M3 embeddings) over operators, wiki, YouTube transcripts, vision-pass technique extractions and shader libraries.
+3. **Build protocol** — `td_plan` registers a KB-grounded plan before creation (soft gate on `td_create_op`, hard with `TD_MCP_REQUIRE_PLAN=1`); `td_checkpoint`/`td_rollback` bound experiments; `td_snapshot` closes the visual loop; `td_layout_network` reorganizes and annotates the result.
 
 ## Install (dev)
 
@@ -18,10 +16,10 @@ Three layers:
 cd td-mcp
 python3.11 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e ".[dev]"          # tests + lint
+# extras: .[kb] vector search (~3GB torch), .[ingest] scrapers/whisper,
+#         .[vision] tutorial vision pass, .[vj] VJ corpus (CLIP)
 ```
-
-Optional extras: `pip install -e ".[kb,ingest,dev]"` for vector DB + scraping deps.
 
 ## Run
 
@@ -29,7 +27,13 @@ Optional extras: `pip install -e ".[kb,ingest,dev]"` for vector DB + scraping de
 td-mcp                  # stdio MCP server
 ```
 
-Or wire into Claude Code via `~/.claude/settings.json`:
+Wire into Claude Code from the repo directory:
+
+```bash
+claude mcp add td-mcp -- td-mcp
+```
+
+(or add it to your project's `.mcp.json`):
 
 ```json
 {
@@ -41,67 +45,65 @@ Or wire into Claude Code via `~/.claude/settings.json`:
 
 ## TouchDesigner side
 
-Drag-drop `td_bridge_tox/td_mcp_bridge.tox` into `/project1/`. Defaults to port 9988. The companion `.tox` is generated from the Python source in `td_bridge_tox/webserver_callbacks.py`.
+Drag-drop `td_bridge_tox/td_mcp_bridge.tox` into `/project1/`. Defaults to port 9988. The `.tox` wraps a WebServer DAT whose callbacks are `td_bridge_tox/webserver_callbacks.py`; on every `td_connect` the server compares script hashes and re-syncs the DAT if the project reverted it.
+
+### Auth
+
+The WebServer DAT listens on the network, and the bridge exposes `eval`/`exec`. On first `td_connect` the server creates a same-machine token file (`~/.cache/td-mcp/bridge_token`, override with `TD_MCP_TOKEN_FILE`) and sends it with every message; once the file exists, the TD side rejects messages without it. A LAN client can reach the port but not the file. To force a fixed secret instead, set `SHARED_SECRET` in the DAT callbacks.
+
+## Tools (overview)
+
+- **Bridge / project**: `td_connect`, `td_disconnect`, `td_status`, `td_get_network`, `td_op_info`, `td_create_op`, `td_delete_op`, `td_connect_ops`, `td_set_param` (typo suggestions from the enriched catalog), `td_pulse`, `td_expr`, `td_run_script`, `td_timeline_play/stop`, `td_save_project`, `td_snapshot`
+- **Plan & safety**: `td_plan` (KB-grounded staging, gap protocol), `td_checkpoint` / `td_rollback` / `td_list_checkpoints` (comp-scoped `.tox` snapshots, FIFO 20), `td_layout_network` (topological grid + cluster annotations + semantic renames, checkpointed)
+- **KB**: `kb_list_operators`, `kb_get_operator` (param schemas: internal name, label, style, menu tokens), `kb_refresh_operators_catalog`, `kb_pop_pattern`, `kb_promote_pop_pattern`, `kb_glsl_template`, `kb_get_cinematic_recipe`, `kb_get_vj_loop_reference`
+- **Vector search**: `kb_search` (filters: source/family/is_glsl), `kb_get_tutorial` (EVERY chunk of one video, ordered — transcript + vision), `kb_reindex`, `kb_index_update` (incremental upsert with orphan purge), `kb_vector_status`
+- **Ingestion**: `kb_ingest_wiki` / `kb_ingest_wiki_full` (docs.derivative.ca, polite + resumable), `kb_ingest_youtube_channel` (yt-dlp + whisper), `kb_ingest_tutorial_vision` (scene-detected keyframes → vision model → technique extractions), `td_compile_technique` (build an extraction live in TD), `kb_ingest_geeks3d_shaders`, `kb_ingest_shadertoy_shaders`, `kb_ingest_vj_corpus` (CLIP + Haiku)
+
+## Vector KB
+
+```bash
+pip install -e ".[kb]"    # heavy: ~3GB incl. PyTorch
+```
+
+Then from the agent: `kb_reindex` once, `kb_index_update` after any ingestion, `kb_search query="..."`.
+
+Default embedding model: `BAAI/bge-m3` (~2GB, multilingual). Override with `TD_MCP_EMBEDDING_MODEL` (e.g. `sentence-transformers/all-MiniLM-L6-v2` for fast iteration). Index lives in `~/.cache/td-mcp/lancedb/` (`TD_MCP_VECTOR_DB` to move it).
+
+## Environment variables
+
+| Variable | Effect |
+|---|---|
+| `TD_MCP_REQUIRE_PLAN=1` | `td_create_op` hard-fails without a registered `td_plan` |
+| `TD_MCP_TOKEN_FILE` | Bridge token file location (default `~/.cache/td-mcp/bridge_token`) |
+| `TD_MCP_EMBEDDING_MODEL` | Embedding model override |
+| `TD_MCP_VECTOR_DB` | LanceDB index location |
+| `TD_MCP_WHISPER_MODEL` | Whisper model (`tiny`…`large-v3`, default `base`) |
+| `TD_MCP_YTDLP_COOKIES_BROWSER` | Browser to read YouTube cookies from (SABR workaround) |
+| `TD_MCP_SHADERTOY_API_KEY` | Shadertoy API key for shader ingestion |
+| `ANTHROPIC_API_KEY` | Vision pass + VJ corpus classification |
 
 ## Skills (workflow forcing)
 
-Three SKILL.md files under `skills/` get auto-loaded by Claude Code when TD work is detected, so the typed-validation workflow gets injected at every conversation start instead of relying on memory. Install with:
+Three SKILL.md files under `skills/` get auto-loaded by Claude Code when TD work is detected (KB-grounded planning, cook-budget protocol, visual validation, POP specifics). Install with:
 
 ```bash
 python scripts/install_skills.py
 ```
 
-Copies (not symlinks) into `~/.claude/skills/`. Re-run after pulling changes. Restart Claude Code to pick up new or modified skills.
+Copies (not symlinks) into `~/.claude/skills/`. Re-run after pulling changes.
 
-## Status of phases
-
-- [x] Phase 0 — boilerplate, ping
-- [x] Phase 1 — bridge live (connect, status, inspect, create, mutate, connect ops, delete)
-- [x] Phase 2 — screenshot, cook stats
-- [x] Phase 2.5 — checkpoint/rollback
-- [x] Phase 3 — KB operators structured (Pydantic catalog + typed validation)
-- [x] Phase 3.5 — Skills authoring (`~/.claude/skills/touchdesigner*/`)
-- [~] Phase 3.6 — Sub-KB POPs scaffold + 2 seed patterns (target: 15-25 over time)
-- [x] Phase 3.7 — Sub-KB GLSL TOP + templates
-- [~] Phase 4 — Vector KB infra (LanceDB + BGE-M3) seeded from structured KBs
-- [~] Phase 4.1 — derivative.ca wiki ingest for POPs (100 pages); other families pending
-- [~] Phase 4.2 — YouTube ingest pipeline (yt-dlp + openai-whisper); seeded with 4 OkamirufuV POP tutorials
-- [ ] Phase 4.5 — Visual techniques curated (80-150 entries)
-- [ ] Phase 5 — Workflow patterns curated (30-50, non-POP)
-- [ ] Phase 6a — Vibe loop (set_reference, iterate, visual_diff)
-- [ ] Phase 6b — Rigorous loop (state machine, propose_plan, validate)
-- [ ] Phase 7 — Evals + baseline report
-- [ ] Phase 8 — Polish, install script, semver compat check
-
-## Vector KB
-
-Optional semantic search across operators + GLSL templates + POP patterns.
-Install the `kb` extras (heavy — ~3GB including PyTorch):
+## Development
 
 ```bash
-pip install -e ".[kb]"
+pytest -q        # full suite, no TD or network needed
+ruff check .     # lint (TD builtins ignored for the DAT script)
 ```
 
-Then build the index from inside Claude Code:
+CI runs both on every push/PR, plus a wheel build check.
 
-```
-kb_reindex
-kb_search query="audio reactive sphere"
-```
+## Status
 
-The default embedding model is `BAAI/bge-m3` (~2GB, downloads once,
-multilingual). Override for faster iteration with `TD_MCP_EMBEDDING_MODEL`
-(e.g. `sentence-transformers/all-MiniLM-L6-v2`, ~80MB, English-only).
-Index lives in `~/.cache/td-mcp/lancedb/` (override with `TD_MCP_VECTOR_DB`).
-
-## VJ / Cinematic / Layout tools
-
-- `kb_get_cinematic_recipe(look)` — typed cinematic recipes (DOF, lumablur, anamorphic, etc.)
-- `kb_get_vj_loop_reference(query, top_k)` — curated VJ loop patterns + visual refs
-- `kb_ingest_vj_corpus(url_list_path)` — pipeline yt-dlp+ffmpeg+CLIP+Haiku → LanceDB
-- `td_layout_network(path, mode)` — geometric layout + cluster annotations + semantic rename
-
-Install the VJ extras for corpus ingestion: `pip install -e ".[vj]"` (requires GPU for CLIP).
+Bridge, checkpoints, layout, typed KBs, vector search and all ingestion pipelines are live and tested. Open workstreams: visual diff loop (reference compare), cook-cost instrumentation (`td_perf`), eval harness for KB curation, session-persistent checkpoints.
 
 ## License
 

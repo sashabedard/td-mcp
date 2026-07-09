@@ -50,3 +50,59 @@ def test_run_script_does_not_pollute_bridge_namespace():
     # Next call still works — the module's own names were untouched.
     result = mod._dispatch("run_script", {"code": "print('still alive')\n"})
     assert result["output"] == "still alive\n"
+
+
+# ─────────────────────────── token auth ──────────────────────────────────────
+
+
+class _FakeWebServer:
+    def __init__(self):
+        self.sent = []
+
+    def webSocketSendText(self, client, text):
+        import json as _json
+        self.sent.append(_json.loads(text))
+
+
+def _receive(mod, payload: dict) -> dict:
+    import json as _json
+    ws = _FakeWebServer()
+    mod.onWebSocketReceiveText(ws, "client1", _json.dumps(payload))
+    return ws.sent[-1]
+
+
+def test_missing_token_rejected_when_token_file_exists(tmp_path):
+    """As soon as the same-machine token file exists (the MCP server creates
+    it at connect), a message without the token must be rejected — eval/exec
+    must not be open to anyone on the LAN."""
+    mod = _load_callbacks()
+    token_file = tmp_path / "bridge_token"
+    token_file.write_text("s3cret")
+    mod.TOKEN_FILE = token_file
+
+    resp = _receive(mod, {"id": 1, "action": "eval", "data": {"expression": "1+1"}})
+    assert resp["ok"] is False
+    assert "Unauthorized" in resp["error"]["message"]
+
+
+def test_matching_token_accepted(tmp_path):
+    mod = _load_callbacks()
+    token_file = tmp_path / "bridge_token"
+    token_file.write_text("s3cret\n")
+    mod.TOKEN_FILE = token_file
+
+    resp = _receive(mod, {"id": 1, "action": "run_script",
+                          "data": {"code": "print('hi')"}, "token": "s3cret"})
+    assert resp["ok"] is True
+    assert resp["result"]["output"] == "hi\n"
+
+
+def test_no_token_file_allows_local_dev(tmp_path):
+    """Without a token file (server never connected on this machine) the
+    bridge keeps working — enforcement starts as soon as td_connect creates
+    the file."""
+    mod = _load_callbacks()
+    mod.TOKEN_FILE = tmp_path / "does_not_exist"
+
+    resp = _receive(mod, {"id": 1, "action": "run_script", "data": {"code": "print('ok')"}})
+    assert resp["ok"] is True

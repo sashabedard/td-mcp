@@ -18,7 +18,8 @@ dependencies = [
 
 [project.optional-dependencies]
 kb = [
-    "lancedb>=0.13",
+    # vector.py uses list_tables() — absent from the 0.13-era API
+    "lancedb>=0.24",
     "sentence-transformers>=3.0",
     "pyarrow>=17.0",
 ]
@@ -43,6 +44,11 @@ dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
     "ruff>=0.6",
+    # The test suite exercises the LanceDB layer and ingest modules with
+    # real tables and mocked network — no torch/whisper needed.
+    "lancedb>=0.24",
+    "pyarrow>=17.0",
+    "httpx>=0.27",
 ]
 
 [project.scripts]
@@ -51,9 +57,22 @@ td-mcp = "td_mcp.__main__:main"
 [tool.hatch.build.targets.wheel]
 packages = ["td_mcp"]
 
+[tool.hatch.build.targets.wheel.force-include]
+# Ship the TD-side bridge script as package data so _sync_bridge_script
+# can repair the DAT from a pip-installed server (no source checkout).
+"td_bridge_tox/webserver_callbacks.py" = "td_mcp/_bridge/webserver_callbacks.py"
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+
+[tool.ruff.lint.per-file-ignores]
+# Runs inside TouchDesigner: op/me/td/project/root/absTime/app/webserverDAT...
+# are injected by TD at runtime — undefined for ruff, real in the DAT.
+"td_bridge_tox/webserver_callbacks.py" = ["F821"]
+# Tests are organized in sections with their imports; late imports are
+# deliberate there.
+"tests/**" = ["E402"]

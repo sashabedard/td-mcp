@@ -221,7 +221,6 @@ def test_process_video_resumes_from_techniques(tmp_path):
 
 # ─────────────────────────── keyframe extraction resilience ─────────────────
 
-from unittest.mock import patch  # noqa: E402
 
 import pytest  # noqa: E402
 
