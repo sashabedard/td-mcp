@@ -38,9 +38,11 @@ async def test_sync_repairs_on_drift_and_verifies():
         calls.append(action)
         if action == "bridge_version":
             # première réponse: dérive; après réparation: à jour
-            return {"script_hash": "stale"} if calls.count("bridge_version") == 1 else {"script_hash": local_hash}
+            if calls.count("bridge_version") == 1:
+                return {"ok": True, "script_hash": "stale"}
+            return {"ok": True, "script_hash": local_hash}
         if action == "run_script":
-            return {"output": "/MCP/webserver1_callbacks\n"}
+            return {"ok": True, "output": "/MCP/webserver1_callbacks\n"}
         raise AssertionError(action)
 
     with patch.object(server, "_call", new=fake_call):
@@ -79,3 +81,24 @@ def test_bridge_script_falls_back_to_packaged_copy(tmp_path, monkeypatch):
     text, sha, path = result
     assert path == str(packaged_copy)
     assert "onWebSocketReceiveText" in text
+
+
+@pytest.mark.asyncio
+async def test_sync_surfaces_repair_script_error(monkeypatch):
+    """A repair that errors TD-side (e.g. ascii-encode crash on em-dashes)
+    must surface the real error — not masquerade as 'no callbacks DAT'."""
+    from unittest.mock import AsyncMock
+
+    from td_mcp import server
+
+    async def fake_call(action, **data):
+        if action == "bridge_version":
+            return {"ok": True, "script_hash": "not-matching"}
+        if action == "run_script":
+            return {"ok": False, "error": "'ascii' codec can't encode character '\\u2014'"}
+        raise AssertionError(action)
+
+    monkeypatch.setattr(server, "_call", AsyncMock(side_effect=fake_call))
+    result = await server._sync_bridge_script()
+    assert result["status"] == "failed"
+    assert "ascii" in result["reason"]

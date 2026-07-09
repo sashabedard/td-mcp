@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import json
+import tempfile
 import time
 import uuid
 from pathlib import Path
@@ -53,12 +54,29 @@ async def _get_project_folder() -> str:
 
 
 async def _call(action: str, **data: Any) -> dict:
-    """Bridge call wrapper. Returns {ok: True, **result} or {ok: False, error}."""
+    """Bridge call wrapper. Returns {ok: True, **result} or {ok: False, error}.
+
+    When the bridge's rolling latency says TD's cook thread is starving
+    (sustained slow roundtrips), every response carries a
+    cook_pressure_warning — the mechanical version of the cook-budget
+    protocol, before calls start timing out entirely."""
     try:
         result = await bridge.send(action, {k: v for k, v in data.items() if v is not None})
-        return {"ok": True, **result}
+        response = {"ok": True, **result}
     except TDError as e:
-        return {"ok": False, "error": e.message}
+        response = {"ok": False, "error": e.message}
+    pressure = bridge.cook_pressure()
+    if pressure:
+        response["cook_pressure_warning"] = {
+            **pressure,
+            "hint": (
+                "TD's cook thread is starving the bridge (median roundtrip "
+                f"{pressure['median_ms']}ms). Run td_perf to find the heavy "
+                "ops, disable/downscale them or pause the timeline — do NOT "
+                "keep hammering calls into a wedging graph."
+            ),
+        }
+    return response
 
 
 # ─────────────────────────── system / connection ───────────────────────────
@@ -146,26 +164,31 @@ async def _sync_bridge_script() -> dict:
     except Exception:
         pass  # old bridge without the action — repair below
 
+    # encoding='utf-8' on BOTH file ops: TD's embedded Python defaults to
+    # ASCII, and the script contains em-dashes — the backup write crashed
+    # the whole repair the first time a non-ASCII script shipped.
+    backup = str(Path(tempfile.gettempdir()) / "td_mcp_bridge_backup.py")
     repair = (
         "from pathlib import Path\n"
         "_updated = []\n"
         "for _ws in root.findChildren(type=webserverDAT, maxDepth=10):\n"
         "    _cb = _ws.par.callbacks.eval()\n"
         "    if _cb and 'def onWebSocketReceiveText' in _cb.text:\n"
-        f"        Path('/tmp/td_mcp_bridge_backup.py').write_text(_cb.text)\n"
+        f"        Path({backup!r}).write_text(_cb.text, encoding='utf-8')\n"
         f"        _cb.text = Path({script_path!r}).read_text(encoding='utf-8')\n"
         "        _updated.append(_cb.path)\n"
         "print(','.join(_updated))\n"
     )
     try:
         result = await _call("run_script", code=repair)
+        if not result.get("ok"):
+            return {"status": "failed", "reason": result.get("error", "repair script failed")}
         updated = (result.get("output") or "").strip()
         if not updated:
             return {"status": "failed", "reason": "no callbacks DAT found to update"}
         verify = await _call("bridge_version")
         if verify.get("script_hash") == local_hash:
-            return {"status": "updated", "dat": updated,
-                    "backup": "/tmp/td_mcp_bridge_backup.py"}
+            return {"status": "updated", "dat": updated, "backup": backup}
         return {"status": "failed", "reason": "hash mismatch after update"}
     except Exception as e:
         return {"status": "failed", "reason": str(e)}
@@ -450,21 +473,85 @@ async def td_save_project(file: str | None = None) -> dict:
     return await _call("save_project", file=file)
 
 
+@mcp.tool()
+async def td_perf(path: str = "/", top: int = 15) -> dict:
+    """Report the heaviest operators by last measured cook time (CPU + GPU
+    ms, per op, sorted). Run this BEFORE the graph wedges the bridge — TD's
+    WebServer DAT shares the main cook thread, so a heavy graph starves
+    every bridge call.
+
+    Returns `frame_budget_ms` (1000/cookRate) for context and, when any op
+    eats more than half the budget, a `budget_eaters` list — those are the
+    ops to disable, downscale, or isolate first (environmentlightCOMP IBL,
+    full-res renders, big blurs are the usual suspects).
+    """
+    result = await _call("perf_report", path=path, top=top)
+    if not result.get("ok"):
+        return result
+    budget = result.get("frame_budget_ms") or 0.0
+    if budget:
+        eaters = [
+            r["path"] for r in result.get("top", [])
+            if r["cpu_ms"] + r["gpu_ms"] > budget * 0.5
+        ]
+        if eaters:
+            result["budget_eaters"] = eaters
+            result["hint"] = (
+                f"These ops each eat >50% of the {budget:.1f}ms frame budget. "
+                "Disable cooking on what you are not judging, iterate at "
+                "smaller resolution, or isolate the scene in its own COMP."
+            )
+    return result
+
+
 # ─────────────────────────── visual feedback ───────────────────────────────
 
 
 @mcp.tool()
-async def td_snapshot(op_path: str) -> Image:
+async def td_snapshot(op_path: str, max_size: int = 0) -> Image:
     """Force-cook a TOP and return its current frame as a PNG.
 
     Returns an MCP Image (visible directly to the agent). For the vibe loop,
     this closes the feedback cycle: mutate → snapshot → judge → iterate.
+    `max_size` > 0 downscales so the longest side fits (e.g. 512) — smaller
+    context cost while iterating; leave 0 for the native resolution.
 
     Raises TDError if the bridge is disconnected or the path is not a TOP.
     """
     result = await bridge.send("snapshot", {"op": op_path})
     png_bytes = base64.b64decode(result["base64"])
+    if max_size > 0:
+        from td_mcp.tools.visual import downscale_png
+
+        png_bytes = downscale_png(png_bytes, max_size)
     return Image(data=png_bytes, format="png")
+
+
+@mcp.tool()
+async def td_visual_diff(op_path: str, reference_path: str) -> dict:
+    """Compare a TOP's current frame against a reference image on disk.
+
+    The vibe loop, quantified: returns `similarity` (0-1, pixel-based),
+    signed deltas (luminance, contrast, RGB — current minus reference),
+    verbal `notes` describing the biggest gaps ("current is darker",
+    "bottom-left zone much brighter"), and `clip_similarity` when the [vj]
+    extra is installed (semantic, robust to layout shifts).
+
+    Iterate mutate → td_visual_diff → adjust until similarity stops
+    improving, then judge the final frame with td_snapshot.
+    """
+    from td_mcp.tools.visual import compare_images
+
+    ref = Path(reference_path)
+    if not ref.exists():
+        return {"ok": False, "error": f"reference image not found: {reference_path}"}
+    try:
+        result = await bridge.send("snapshot", {"op": op_path})
+    except TDError as e:
+        return {"ok": False, "error": e.message}
+    png_bytes = base64.b64decode(result["base64"])
+    metrics = await asyncio.to_thread(compare_images, png_bytes, ref.read_bytes())
+    return {"ok": True, "op": op_path, "reference": str(ref), **metrics}
 
 
 # ─────────────────────────── checkpoint / rollback ─────────────────────────

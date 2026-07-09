@@ -1,5 +1,7 @@
 import asyncio
 import json
+import os
+from collections import deque
 from typing import Any
 
 import websockets
@@ -23,10 +25,32 @@ class TDBridge:
         self._timeout: float = 5.0
         self._reader_task: asyncio.Task[None] | None = None
         self._lock = asyncio.Lock()
+        # Rolling roundtrip latencies (ms). TD's WebServer DAT shares the
+        # main cook thread: sustained slow responses mean the graph is
+        # starving the bridge — the wedge is coming.
+        self._latencies: deque[float] = deque(maxlen=10)
 
     @property
     def connected(self) -> bool:
         return self._ws is not None
+
+    def cook_pressure(self) -> dict[str, Any] | None:
+        """Non-None when the MEDIAN of recent roundtrips exceeds the
+        threshold (TD_MCP_COOK_PRESSURE_MS, default 750). Median, not mean:
+        one legitimate 180s catalog refresh must not trip it — only
+        sustained slowness does. Needs ≥3 samples."""
+        if len(self._latencies) < 3:
+            return None
+        ordered = sorted(self._latencies)
+        median = ordered[len(ordered) // 2]
+        threshold = float(os.environ.get("TD_MCP_COOK_PRESSURE_MS", "750"))
+        if median <= threshold:
+            return None
+        return {
+            "median_ms": round(median, 1),
+            "threshold_ms": threshold,
+            "samples": len(ordered),
+        }
 
     async def connect(self, url: str, token: str | None = None, timeout: float = 5.0) -> None:
         async with self._lock:
@@ -45,6 +69,7 @@ class TDBridge:
                 url, open_timeout=timeout, ping_interval=None,
                 max_size=256 * 1024 * 1024,
             )
+            self._latencies.clear()
             self._reader_task = asyncio.create_task(self._reader_loop(self._ws))
 
     async def disconnect(self) -> None:
@@ -140,10 +165,16 @@ class TDBridge:
             raise TDError(
                 f'Failed to send "{action}" — connection to TouchDesigner lost: {e!r}'
             ) from e
+        loop = asyncio.get_running_loop()
+        t0 = loop.time()
         try:
-            return await asyncio.wait_for(fut, timeout=effective_timeout)
+            result = await asyncio.wait_for(fut, timeout=effective_timeout)
+            self._latencies.append((loop.time() - t0) * 1000.0)
+            return result
         except asyncio.TimeoutError as e:
             self._pending.pop(msg_id, None)
+            # A timeout is the strongest pressure signal there is.
+            self._latencies.append(effective_timeout * 1000.0)
             raise TDError(f'Action "{action}" timed out after {effective_timeout}s') from e
 
 

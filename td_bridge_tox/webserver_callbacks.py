@@ -267,6 +267,49 @@ def _dispatch(action, data):
     elif action == 'get_project_folder':
         return {'folder': project.folder}
 
+    elif action == 'perf_report':
+        # Cook-cost report: the heaviest ops by last measured cook time.
+        # Field names verified live on build 2025.32820 (cpuCookTime /
+        # gpuCookTime / childrenCPUCookTime / totalCooks).
+        parent_path = data.get('path', '/')
+        top = int(data.get('top', 15))
+        max_depth = int(data.get('max_depth', 10))
+        parent_op = op(parent_path)
+        if not parent_op:
+            raise Exception(f'Parent not found: {parent_path}')
+        rows = []
+        for o in parent_op.findChildren(maxDepth=max_depth):
+            try:
+                rows.append({
+                    'path': o.path,
+                    'op_type': getattr(o, 'OPType', o.type),
+                    'cpu_ms': float(getattr(o, 'cpuCookTime', 0.0) or 0.0),
+                    'gpu_ms': float(getattr(o, 'gpuCookTime', 0.0) or 0.0),
+                    'children_cpu_ms': float(getattr(o, 'childrenCPUCookTime', 0.0) or 0.0),
+                    'children_gpu_ms': float(getattr(o, 'childrenGPUCookTime', 0.0) or 0.0),
+                    'total_cooks': int(getattr(o, 'totalCooks', 0) or 0),
+                })
+            except Exception:
+                pass
+        rows.sort(key=lambda r: r['cpu_ms'] + r['gpu_ms'], reverse=True)
+        try:
+            rate = float(project.cookRate)
+        except Exception:
+            rate = 60.0
+        total_cpu = 0.0
+        total_gpu = 0.0
+        for r in rows:
+            total_cpu += r['cpu_ms']
+            total_gpu += r['gpu_ms']
+        return {
+            'path': parent_path,
+            'measured_ops': len(rows),
+            'frame_budget_ms': (1000.0 / rate) if rate else 0.0,
+            'total_cpu_ms': total_cpu,
+            'total_gpu_ms': total_gpu,
+            'top': rows[:top],
+        }
+
     elif action == 'checkpoint':
         # Comp-scoped .tox export (td_checkpoint and td_layout_network):
         #   data = {"comp_path": "/project1/mycomp", "file_path": "/path/x.tox"}

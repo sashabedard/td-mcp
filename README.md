@@ -55,6 +55,7 @@ The WebServer DAT listens on the network, and the bridge exposes `eval`/`exec`. 
 
 - **Bridge / project**: `td_connect`, `td_disconnect`, `td_status`, `td_get_network`, `td_op_info`, `td_create_op`, `td_delete_op`, `td_connect_ops`, `td_set_param` (typo suggestions from the enriched catalog), `td_pulse`, `td_expr`, `td_run_script`, `td_timeline_play/stop`, `td_save_project`, `td_snapshot`
 - **Plan & safety**: `td_plan` (KB-grounded staging, gap protocol), `td_checkpoint` / `td_rollback` / `td_list_checkpoints` (comp-scoped `.tox` snapshots, FIFO 20), `td_layout_network` (topological grid + cluster annotations + semantic renames, checkpointed)
+- **Visual loop & perf**: `td_snapshot` (optional `max_size` downscale), `td_visual_diff` (snapshot vs reference image: similarity, luminance/contrast/RGB deltas, verbal notes, CLIP similarity with the [vj] extra), `td_perf` (heaviest ops by cook time + `budget_eaters`); every bridge response carries a `cook_pressure_warning` when sustained roundtrip latency says the graph is starving the bridge (`TD_MCP_COOK_PRESSURE_MS`, default 750)
 - **KB**: `kb_list_operators`, `kb_get_operator` (param schemas: internal name, label, style, menu tokens), `kb_refresh_operators_catalog`, `kb_pop_pattern`, `kb_promote_pop_pattern`, `kb_glsl_template`, `kb_get_cinematic_recipe`, `kb_get_vj_loop_reference`
 - **Vector search**: `kb_search` (filters: source/family/is_glsl), `kb_get_tutorial` (EVERY chunk of one video, ordered — transcript + vision), `kb_reindex`, `kb_index_update` (incremental upsert with orphan purge), `kb_vector_status`
 - **Ingestion**: `kb_ingest_wiki` / `kb_ingest_wiki_full` (docs.derivative.ca, polite + resumable), `kb_ingest_youtube_channel` (yt-dlp + whisper), `kb_ingest_tutorial_vision` (scene-detected keyframes → vision model → technique extractions), `td_compile_technique` (build an extraction live in TD), `kb_ingest_geeks3d_shaders`, `kb_ingest_shadertoy_shaders`, `kb_ingest_vj_corpus` (CLIP + Haiku)
@@ -74,6 +75,7 @@ Default embedding model: `BAAI/bge-m3` (~2GB, multilingual). Override with `TD_M
 | Variable | Effect |
 |---|---|
 | `TD_MCP_REQUIRE_PLAN=1` | `td_create_op` hard-fails without a registered `td_plan` |
+| `TD_MCP_COOK_PRESSURE_MS` | Median-latency threshold for `cook_pressure_warning` (default 750) |
 | `TD_MCP_TOKEN_FILE` | Bridge token file location (default `~/.cache/td-mcp/bridge_token`) |
 | `TD_MCP_EMBEDDING_MODEL` | Embedding model override |
 | `TD_MCP_VECTOR_DB` | LanceDB index location |
@@ -103,7 +105,7 @@ CI runs both on every push/PR, plus a wheel build check.
 
 ## Status
 
-Bridge, checkpoints, layout, typed KBs, vector search and all ingestion pipelines are live and tested. Open workstreams: visual diff loop (reference compare), cook-cost instrumentation (`td_perf`), eval harness for KB curation, session-persistent checkpoints.
+Bridge, checkpoints, layout, typed KBs, vector search, ingestion pipelines, cook-cost instrumentation (`td_perf` + cook-pressure watchdog) and the visual diff loop (`td_visual_diff`) are live and tested. Open workstreams: eval harness for KB curation, session-persistent checkpoints, wiki-enriched catalog descriptions + hybrid FTS search.
 
 ## License
 
