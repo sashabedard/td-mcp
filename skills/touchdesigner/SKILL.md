@@ -13,7 +13,7 @@ Your training data on TouchDesigner is outdated and frequently wrong about opera
 For any creative or technical build request, NO operator gets created before this sequence:
 
 1. **Decompose the request into 2-6 named techniques.** One diluted kb_search over the whole request returns noise; per-technique searches hit (validated repeatedly). If the user names an artist or channel (Okamirufu, elekktronaut, paketa12...), search those exact terms — the vision corpus is indexed by channel and the KB knows *their* actual node vocabulary.
-2. **Search the KB for EACH technique**: `kb_search` (with source/family filters), `kb_pop_pattern`, `kb_get_cinematic_recipe`, `kb_get_vj_loop_reference`. Note which chunk grounds which part.
+2. **Search the KB for EACH technique**: `kb_search` (with source/family filters), `kb_pop_pattern`, `kb_get_cinematic_recipe`, `kb_get_vj_loop_reference`. Note which chunk grounds which part. **Also check the Palette** (`td_palette_list query=...`) before hand-building a common utility — movie playback, mapping, mixers, LUTs, UI panels and the user's own downloaded packs (RayTK, FunctionStore...) already exist as curated .tox; a Palette COMP beats a from-scratch rebuild in both reliability and user familiarity. Instantiate with `td_palette_load`.
    **Reproducing a specific tutorial?** `kb_get_tutorial video_id=...` (or `query=...` to find the id) returns EVERY chunk of the video, ordered — kb_search alone WILL miss segments, and one missing segment silently breaks a step-by-step rebuild. When a vision chunk and the raw transcript disagree on a value, **the transcript wins** — the vision pass misreads parameter panels (observed: "Alpha = 0.2, 2.9" fusing alpha and point size into one fake value).
 3. **A gap is not a license to improvise.** A hole in the sequence (e.g. vision chunk 03 missing between 02 and 04) or an unknown config gets resolved by ESCALATING retrieval BEFORE building: `kb_get_tutorial` (full transcript included) → wiki → web. Building through a flagged gap costs a full build-diagnose-rebuild cycle (measured live: an improvised emitter shape produced a flat blob where the tutorial's tube+copy produced the vortex). Improvise only when escalation is exhausted — and say so.
 4. **Register the plan with `td_plan` before the first td_create_op** (intention, stages each carrying `kb_source` + `confidence`, unresolved `gaps`, `success_criteria`), and state it to the user: per stage — the op chain, the KB source that grounds it, and its confidence tier: curated pattern > vision chunk (timestamped, shows real wiring) > wiki > transcript > improvisation. td_create_op warns on every create until a plan is registered (hard error with TD_MCP_REQUIRE_PLAN=1). Any stage resting on improvisation gets flagged to the user BEFORE building, not discovered after.
@@ -93,6 +93,8 @@ calls in one session). The exact names:
 | `td_rollback` | `checkpoint_id` |
 | `td_expr` | `expression` |
 | `td_run_script` | `code` |
+| `td_palette_list` | `query`, `source` (all\|builtin\|user), `limit`, `offset` |
+| `td_palette_load` | `tox` (name, relpath, or `user:`/`builtin:`-qualified), `parent`, `name` |
 
 ## Hard rules
 
@@ -123,3 +125,4 @@ If the user reports an op that should exist but isn't in the catalog, run `kb_re
 - `comp.save(file_path)` exports a `.tox` of the COMP only (not the whole project). `project.save()` saves the `.toe`. Both are exposed via `td_checkpoint` and `td_save_project` respectively.
 - WebServer DAT in TD does not implement the WebSocket ping/pong protocol — the td-mcp bridge already works around this with `ping_interval=None`, but if you write your own WS client to TD you'll hit the same issue.
 - `td_rollback` replaces the COMP wholesale from the .tox: paths stay valid but every param, position and rename inside reverts to checkpoint state. Re-run `td_get_network` before mutating further — cached assumptions about the network are stale after a rollback.
+- `td_palette_load` defaults to `parent="/project1"` — a resolvable identifier loads IMMEDIATELY there. When exploring ("does 'grid' exist?"), use `td_palette_list` to look, not a load call. Palette COMPs can be heavy (UI panels, engines): load into an isolated COMP first, `td_op_info` + snapshot before wiring into the main graph.

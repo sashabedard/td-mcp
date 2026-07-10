@@ -26,6 +26,7 @@ from td_mcp.tools.layout import (
     geometric_layout,
     propose_rename,
 )
+from td_mcp.tools.palette import filter_palette, resolve_tox, scan_palette
 
 mcp = FastMCP("td-mcp")
 
@@ -378,6 +379,108 @@ async def td_create_op(
 async def td_delete_op(path: str) -> dict:
     """Destroy an operator by absolute path. Irreversible — no undo."""
     return await _call("delete_op", path=path)
+
+
+# Palette roots don't move during a TD run; fetched once per server process.
+_palette_roots_cache: dict[str, str] | None = None
+
+
+async def _palette_roots() -> dict[str, str]:
+    global _palette_roots_cache
+    if _palette_roots_cache is None:
+        probe = await _call(
+            "eval",
+            expression="__import__('json').dumps("
+                       "{'builtin': app.paletteFolder, 'user': app.userPaletteFolder})",
+        )
+        _palette_roots_cache = json.loads(probe["value"])
+    return _palette_roots_cache
+
+
+def _scan_palettes(roots: dict[str, str], source: str) -> list[dict]:
+    entries: list[dict] = []
+    for src, root in roots.items():
+        if source in ("all", src):
+            entries.extend(scan_palette(root, src))
+    return entries
+
+
+@mcp.tool()
+async def td_palette_list(query: str = "", source: str = "all",
+                          limit: int = 60, offset: int = 0) -> dict:
+    """Browse installable .tox components: TD's built-in Palette
+    (app.paletteFolder — Tools, UI, Techniques, POPs, ...) AND the user's
+    own palette (app.userPaletteFolder — RayTK, downloaded packs, saved
+    COMPs...).
+
+    `query` substring-filters name and relative path (e.g. 'blur',
+    'Tools/', 'raytk'). `source` is 'all' | 'builtin' | 'user'. Instantiate
+    a result with td_palette_load. Before building a common utility from
+    scratch (movie player, kinect pipeline, LUT, mixer...), check whether
+    the Palette already ships it.
+    """
+    if source not in ("all", "builtin", "user"):
+        return {"ok": False, "error": f"unknown source '{source}' (all|builtin|user)"}
+    roots = await _palette_roots()
+    entries = filter_palette(_scan_palettes(roots, source), query)
+    return {
+        "ok": True,
+        "total": len(entries),
+        "entries": entries[offset:offset + limit],
+        "roots": roots,
+        **({"note": f"{len(entries) - offset - limit} more — raise offset/limit or narrow the query."}
+           if len(entries) > offset + limit else {}),
+    }
+
+
+@mcp.tool()
+async def td_palette_load(
+    tox: str,
+    parent: str = "/project1",
+    name: str = "",
+    x: int = 0,
+    y: int = 0,
+) -> dict:
+    """Instantiate a Palette component (built-in or user) inside a parent
+    COMP via loadTox.
+
+    `tox` accepts a bare name ('moviePlayer'), a relative path
+    ('Tools/moviePlayer.tox'), or a source-qualified form
+    ('user:Grid', 'builtin:Tools/moviePlayer') when the same name exists
+    in both palettes. Unknown or ambiguous identifiers return close-match
+    suggestions instead of hitting TD.
+
+    Palette COMPs can be heavy (UI panels, engines, GPU pipelines) — after
+    loading, td_op_info the result and snapshot before wiring it into the
+    main graph, per the cook budget protocol.
+    """
+    gate = _plan_gate()
+    if gate and _session_plan is None and _require_plan():
+        return {"ok": False, "error": gate["plan_warning"]}
+
+    roots = await _palette_roots()
+    entries = _scan_palettes(roots, "all")
+    entry, suggestions = resolve_tox(tox, entries)
+    if entry is None:
+        if gate:
+            _mark_gap_warning_delivered()
+        return {
+            "ok": False,
+            "error": f"No unique palette component matches {tox!r}",
+            "suggestions": suggestions,
+            "hint": "td_palette_list(query=...) to browse; qualify with "
+                    "'user:' or 'builtin:' on name collisions.",
+            **gate,
+        }
+    file = str(Path(roots[entry["source"]]) / entry["relpath"])
+    result = await _call("load_tox", parent=parent, file=file, name=name, x=x, y=y)
+    if result.get("ok"):
+        result["source"] = entry["source"]
+        result["relpath"] = entry["relpath"]
+    if gate:
+        _mark_gap_warning_delivered()
+        return {**result, **gate}
+    return result
 
 
 @mcp.tool()

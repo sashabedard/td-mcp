@@ -143,3 +143,49 @@ def test_pulse_unknown_param_is_a_named_error():
     with pytest.raises(Exception) as exc_info:
         mod._dispatch("pulse", {"path": "/project1/fake", "param": "resett"})
     assert "resett" in str(exc_info.value)
+
+
+# ─────────────────────────── load_tox ─────────────────────────────────────────
+
+
+def test_load_tox_missing_file_is_a_named_error(tmp_path):
+    """A bad path must fail loud BEFORE calling loadTox — TD-side loadTox
+    on a missing file drops an empty COMP silently."""
+    mod = _load_callbacks()
+
+    class _Parent:
+        def loadTox(self, path):
+            raise AssertionError("loadTox must not be reached")
+
+    mod.op = lambda path: _Parent()
+    with pytest.raises(Exception) as exc_info:
+        mod._dispatch("load_tox", {"parent": "/project1",
+                                   "file": str(tmp_path / "ghost.tox")})
+    assert "ghost.tox" in str(exc_info.value)
+
+
+def test_load_tox_loads_renames_and_positions(tmp_path):
+    mod = _load_callbacks()
+    tox = tmp_path / "thing.tox"
+    tox.write_bytes(b"tox")
+
+    class _NewOp:
+        path = "/project1/thing"
+        type = "base"
+        name = "thing"
+        nodeX = 0
+        nodeY = 0
+
+    new_op = _NewOp()
+
+    class _Parent:
+        def loadTox(self, path):
+            assert path == str(tox)
+            return new_op
+
+    mod.op = lambda path: _Parent()
+    result = mod._dispatch("load_tox", {"parent": "/project1", "file": str(tox),
+                                        "name": "my_thing", "x": 100, "y": -50})
+    assert new_op.name == "my_thing"
+    assert (new_op.nodeX, new_op.nodeY) == (100, -50)
+    assert result["tox"] == str(tox)

@@ -135,6 +135,26 @@ def _dispatch(action, data):
         new_op.nodeY = y
         return {'path': new_op.path, 'type': new_op.type, 'name': new_op.name}
 
+    elif action == 'load_tox':
+        parent_path = data.get('parent', '/project1')
+        file_path = data.get('file', '')
+        name = data.get('name', '')
+        x = data.get('x', 0)
+        y = data.get('y', 0)
+        parent_op = op(parent_path)
+        if not parent_op:
+            raise Exception(f'Parent not found: {parent_path}')
+        import os
+        if not os.path.isfile(file_path):
+            raise Exception(f'.tox not found on disk: {file_path}')
+        new_op = parent_op.loadTox(file_path)
+        if name:
+            new_op.name = name
+        new_op.nodeX = x
+        new_op.nodeY = y
+        return {'path': new_op.path, 'type': new_op.type, 'name': new_op.name,
+                'tox': file_path}
+
     elif action == 'delete_op':
         path = data.get('path', '')
         target = op(path)
