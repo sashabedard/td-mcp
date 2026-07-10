@@ -261,12 +261,46 @@ def _dispatch(action, data):
             for i, inp in enumerate(c.inputs):
                 if inp is not None:
                     conns.append({'src': inp.path, 'dst': c.path, 'in_index': i})
+        # Param references (material, camera, geometry, top, pop, targetpop,
+        # sop...) are dependencies too — without them, mats/cams/geos have no
+        # wires and the layout piles them all into column 0 (a 2400px-tall
+        # stack, observed live). Resolve OP-type params to sibling edges.
+        # For COMPs, also scan their DIRECT children (the select-inside-geo
+        # idiom: geo depends on what its inner selectPOP points at).
+        _OP_STYLES = {'OP', 'TOP', 'CHOP', 'SOP', 'DAT', 'MAT', 'POP',
+                      'COMP', 'Object', 'PanelCOMP'}
+        sibling_paths = set(o['path'] for o in ops_out)
+        ref_conns = []
+
+        def _collect_refs(scan_op, attribute_to):
+            for p in scan_op.pars():
+                if p.style not in _OP_STYLES:
+                    continue
+                try:
+                    tgt = p.eval()
+                except Exception:
+                    continue
+                targets = tgt if isinstance(tgt, (list, tuple)) else [tgt]
+                for t in targets:
+                    if t is None or isinstance(t, str):
+                        continue
+                    tgt_path = getattr(t, 'path', None)
+                    if (tgt_path in sibling_paths and tgt_path != attribute_to):
+                        ref_conns.append({'src': tgt_path, 'dst': attribute_to,
+                                          'via': p.name})
+
+        for c in children:
+            _collect_refs(c, c.path)
+            if c.isCOMP:
+                for sub in c.children:
+                    _collect_refs(sub, c.path)
         # Keep legacy 'operators' key for backward compat.
         return {
             'ok': True,
             'parent': parent_path,
             'ops': ops_out,
             'connections': conns,
+            'ref_connections': ref_conns,
             'operators': ops_out,
             'count': len(ops_out),
         }

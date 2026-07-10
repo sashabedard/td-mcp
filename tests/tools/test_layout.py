@@ -191,3 +191,52 @@ def test_detect_clusters_audio_chain_multihop():
     audio = [c for c in clusters if c["name"] == "Audio reactive"]
     assert len(audio) == 1
     assert set(audio[0]["members"]) == {"/b/audioin", "/b/sel", "/b/spec", "/b/energy", "/b/kick"}
+
+
+@pytest.mark.asyncio
+async def test_ref_connections_spread_paramreferenced_ops_horizontally(tmp_path):
+    """Materials/cameras/geos have no wires — only param references. Without
+    ref edges they all land in column 0 and stack vertically (observed live:
+    a 2400px-tall column). Ref edges must give them real depth so the
+    network reads left-to-right like any TD project."""
+    import td_mcp.server as server
+
+    fake_network = {
+        "ops": [
+            {"path": "/p/copy1", "op_type": "copyPOP", "family": "POP", "x": 0, "y": 0, "name": "copy1"},
+            {"path": "/p/mat1", "op_type": "pbrMAT", "family": "MAT", "x": 0, "y": 0, "name": "mat1"},
+            {"path": "/p/geo1", "op_type": "geometryCOMP", "family": "COMP", "x": 0, "y": 0, "name": "geo1"},
+            {"path": "/p/cam1", "op_type": "cameraCOMP", "family": "COMP", "x": 0, "y": 0, "name": "cam1"},
+            {"path": "/p/render1", "op_type": "renderTOP", "family": "TOP", "x": 0, "y": 0, "name": "render1"},
+        ],
+        "connections": [],
+        "ref_connections": [
+            {"src": "/p/copy1", "dst": "/p/geo1", "via": "pop"},
+            {"src": "/p/mat1", "dst": "/p/geo1", "via": "material"},
+            {"src": "/p/geo1", "dst": "/p/render1", "via": "geometry"},
+            {"src": "/p/cam1", "dst": "/p/render1", "via": "camera"},
+        ],
+    }
+
+    async def fake_send(action, data=None, timeout=None):
+        if action == "get_network":
+            return fake_network
+        if action == "get_project_folder":
+            return {"folder": str(tmp_path)}
+        if action == "checkpoint":
+            return {"comp_path": data["comp_path"], "file_path": data["file_path"]}
+        if action == "apply_layout":
+            return {"ok": True, "applied": {}}
+        raise AssertionError(f"unexpected action {action}")
+
+    server._project_folder_cache = None
+    server._checkpoints.clear()
+    with patch.object(server.bridge, "send", new=AsyncMock(side_effect=fake_send)):
+        result = await server.td_layout_network(parent="/p", mode="grid")
+
+    pos = {m["path"]: (m["x"], m["y"]) for m in result["diff"]["moved"]}
+    # geo depends on copy+mat (column 1), render on geo+cam (column 2):
+    assert pos["/p/geo1"][0] > pos["/p/mat1"][0]
+    assert pos["/p/render1"][0] > pos["/p/geo1"][0]
+    # sources sit in column 0
+    assert pos["/p/copy1"][0] == 0 and pos["/p/cam1"][0] == 0

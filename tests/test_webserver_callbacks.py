@@ -317,3 +317,66 @@ def test_set_flags_no_flags_is_an_error():
     with pytest.raises(Exception) as exc_info:
         mod._dispatch("set_flags", {"path": "/p/x"})
     assert "No flag" in str(exc_info.value)
+
+
+# ─────────────────────── get_network param-reference edges ───────────────────
+
+
+def test_get_network_extracts_param_reference_edges():
+    """OP-type params (material, pop, camera...) are dependencies the layout
+    needs; wires alone leave mats/cams/geos stacked in column 0."""
+    mod = _load_callbacks()
+
+    class _Par:
+        def __init__(self, name, style, target):
+            self.name = name
+            self.style = style
+            self._t = target
+
+        def eval(self):
+            return self._t
+
+    class _BaseOp:
+        inputs = []
+        children = []
+        isCOMP = False
+        nodeX = 0
+        nodeY = 0
+        type = "x"
+
+        def pars(self):
+            return list(self._pars)
+
+    class _Mat(_BaseOp):
+        path, name, _pars = "/p/mat1", "mat1", []
+
+    mat = _Mat()
+
+    class _InnerSelect(_BaseOp):
+        path, name = "/p/geo1/sel", "sel"
+
+    class _Copy(_BaseOp):
+        path, name, _pars = "/p/copy1", "copy1", []
+
+    copy1 = _Copy()
+    inner = _InnerSelect()
+    inner._pars = [_Par("pop", "POP", copy1)]
+
+    class _Geo(_BaseOp):
+        path, name = "/p/geo1", "geo1"
+        isCOMP = True
+
+    geo = _Geo()
+    geo.children = [inner]
+    geo._pars = [_Par("material", "MAT", mat),
+                 _Par("label", "Str", "not an op")]
+
+    class _Parent:
+        children = [mat, copy1, geo]
+
+    mod.op = lambda path: _Parent()
+    result = mod._dispatch("get_network", {"path": "/p"})
+    refs = {(r["src"], r["dst"], r["via"]) for r in result["ref_connections"]}
+    assert ("/p/mat1", "/p/geo1", "material") in refs
+    assert ("/p/copy1", "/p/geo1", "pop") in refs  # via the inner selectPOP
+    assert len(refs) == 2

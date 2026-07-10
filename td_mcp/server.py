@@ -1591,7 +1591,14 @@ async def td_layout_network(parent: str, mode: str = "grid_annotated") -> dict:
     if not ops:
         return {"ok": True, "diff": LayoutDiff().model_dump()}
 
+    # Wires + param references (material, camera, pop, top...) both count as
+    # dependencies: without ref edges, mats/cams/geos have no wires at all and
+    # pile up in column 0 as a tall vertical stack — TD networks read
+    # left-to-right. Cycles (feedback target, particle targetpop) are broken
+    # by assign_columns_by_depth.
+    ref_connections = network.get("ref_connections", [])
     edges = [(c["src"], c["dst"]) for c in connections]
+    edges += [(c["src"], c["dst"]) for c in ref_connections]
     op_paths = [o["path"] for o in ops]
     columns = assign_columns_by_depth(op_paths, edges)
 
