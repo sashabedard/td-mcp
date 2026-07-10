@@ -95,6 +95,7 @@ calls in one session). The exact names:
 | `td_run_script` | `code` |
 | `td_palette_list` | `query`, `source` (all\|builtin\|user), `limit`, `offset` |
 | `td_palette_load` | `tox` (name, relpath, or `user:`/`builtin:`-qualified), `parent`, `name` |
+| `td_set_flags` | `path` + any of `display`, `render`, `bypass`, `viewer`, `lock` |
 
 ## Hard rules
 
@@ -126,3 +127,5 @@ If the user reports an op that should exist but isn't in the catalog, run `kb_re
 - WebServer DAT in TD does not implement the WebSocket ping/pong protocol — the td-mcp bridge already works around this with `ping_interval=None`, but if you write your own WS client to TD you'll hit the same issue.
 - `td_rollback` replaces the COMP wholesale from the .tox: paths stay valid but every param, position and rename inside reverts to checkpoint state. Re-run `td_get_network` before mutating further — cached assumptions about the network are stale after a rollback.
 - `td_palette_load` defaults to `parent="/project1"` — a resolvable identifier loads IMMEDIATELY there. When exploring ("does 'grid' exist?"), use `td_palette_list` to look, not a load call. Palette COMPs can be heavy (UI panels, engines): load into an isolated COMP first, `td_op_info` + snapshot before wiring into the main graph.
+- Most COMPs (geoCOMP, cameraCOMP...) have NO wired data inputs — `td_connect_ops` into them fails by design. The idiom: create a selectPOP/inSOP INSIDE the COMP pointing at the source, then `td_set_flags` display+render on it. A geoCOMP created by td_create_op ships with a default `torus1` inside — destroy it or your render shows a torus.
+- Old palette components (Toxsavebuild ≤2022) can misbehave on TD 2025 — the bloom.tox's internal feedback diverged to -6.0 (white frame, alpha 0). If a palette COMP outputs garbage, check its internal feedbackTOPs (`.sample()` centre pixel) and fall back to the KB node recipe (`kb_get_cinematic_recipe`).

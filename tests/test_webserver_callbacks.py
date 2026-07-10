@@ -189,3 +189,131 @@ def test_load_tox_loads_renames_and_positions(tmp_path):
     assert new_op.name == "my_thing"
     assert (new_op.nodeX, new_op.nodeY) == (100, -50)
     assert result["tox"] == str(tox)
+
+
+# ─────────────────────── connect_ops connector guards ─────────────────────────
+
+
+def test_connect_into_comp_without_inputs_names_the_idiom():
+    """geoCOMP-style targets (0 data inputs) raised a bare IndexError; the
+    error must explain the select-inside-the-COMP idiom instead."""
+    mod = _load_callbacks()
+
+    class _Out:
+        outputConnectors = [object()]
+
+    class _GeoLike:
+        inputConnectors = []
+        isCOMP = True
+
+    ops = {"/p/out1": _Out(), "/p/geo1": _GeoLike()}
+    mod.op = lambda path: ops.get(path)
+    with pytest.raises(Exception) as exc_info:
+        mod._dispatch("connect_ops", {"out": "/p/out1", "into": "/p/geo1"})
+    msg = str(exc_info.value)
+    assert "0 data input" in msg
+    assert "selectPOP" in msg
+
+
+# ─────────────────────── load_tox wrapper extraction ──────────────────────────
+
+
+class _Connector:
+    def connect(self, other):
+        pass
+
+
+def _palette_wrapper_fixture(tmp_path):
+    """A Derivative-palette-style wrapper: no connectors, icon TOP + one
+    inner COMP that has real connectors."""
+    tox = tmp_path / "bloom.tox"
+    tox.write_bytes(b"tox")
+
+    class _Icon:
+        isCOMP = False
+
+    class _Inner:
+        name = "bloom"
+        isCOMP = True
+        inputConnectors = [_Connector(), _Connector()]
+        outputConnectors = [_Connector()]
+        customPars = ["Threshold"]
+
+    class _Wrapper:
+        name = "bloom1"
+        path = "/p/bloom1"
+        type = "base"
+        inputConnectors = []
+        outputConnectors = []
+        children = [_Icon(), _Inner()]
+        destroyed = False
+
+        def destroy(self):
+            _Wrapper.destroyed = True
+
+    class _Extracted:
+        path = "/p/bloom"
+        type = "base"
+        name = "bloom"
+        nodeX = 0
+        nodeY = 0
+
+    class _Parent:
+        copied_with = None
+
+        def loadTox(self, path):
+            return _Wrapper()
+
+        def copy(self, inner, name=""):
+            _Parent.copied_with = (inner.name, name)
+            return _Extracted()
+
+    return tox, _Parent, _Wrapper
+
+
+def test_load_tox_extracts_palette_wrapper(tmp_path):
+    mod = _load_callbacks()
+    tox, parent_cls, wrapper_cls = _palette_wrapper_fixture(tmp_path)
+    mod.op = lambda path: parent_cls()
+    result = mod._dispatch("load_tox", {"parent": "/p", "file": str(tox)})
+    assert result["extracted"] is True
+    assert wrapper_cls.destroyed is True
+    assert parent_cls.copied_with == ("bloom", "bloom")
+
+
+def test_load_tox_extract_false_keeps_wrapper(tmp_path):
+    mod = _load_callbacks()
+    tox, parent_cls, wrapper_cls = _palette_wrapper_fixture(tmp_path)
+    wrapper_cls.destroyed = False
+    mod.op = lambda path: parent_cls()
+    result = mod._dispatch("load_tox", {"parent": "/p", "file": str(tox),
+                                        "extract": False})
+    assert result["extracted"] is False
+    assert wrapper_cls.destroyed is False
+
+
+# ─────────────────────────── set_flags ────────────────────────────────────────
+
+
+def test_set_flags_applies_only_given_flags():
+    mod = _load_callbacks()
+
+    class _Op:
+        display = False
+        render = False
+        bypass = False
+
+    target = _Op()
+    mod.op = lambda path: target
+    result = mod._dispatch("set_flags", {"path": "/p/x", "display": True,
+                                         "render": True})
+    assert (target.display, target.render, target.bypass) == (True, True, False)
+    assert result["flags"] == {"display": True, "render": True}
+
+
+def test_set_flags_no_flags_is_an_error():
+    mod = _load_callbacks()
+    mod.op = lambda path: object()
+    with pytest.raises(Exception) as exc_info:
+        mod._dispatch("set_flags", {"path": "/p/x"})
+    assert "No flag" in str(exc_info.value)

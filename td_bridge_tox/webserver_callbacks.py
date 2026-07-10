@@ -148,12 +148,32 @@ def _dispatch(action, data):
         if not os.path.isfile(file_path):
             raise Exception(f'.tox not found on disk: {file_path}')
         new_op = parent_op.loadTox(file_path)
+        extracted = False
+        if data.get('extract', True):
+            # Derivative palette .tox files wrap the real component one level
+            # down (wrapper: no connectors, an icon TOP, one child COMP).
+            # Native palette drag&drop extracts it — mirror that.
+            try:
+                inner_comps = [c for c in new_op.children if c.isCOMP]
+                if (len(new_op.inputConnectors) == 0
+                        and len(new_op.outputConnectors) == 0
+                        and len(inner_comps) == 1
+                        and (inner_comps[0].inputConnectors
+                             or inner_comps[0].outputConnectors
+                             or inner_comps[0].customPars)):
+                    inner = inner_comps[0]
+                    pulled = parent_op.copy(inner, name=(name or inner.name))
+                    new_op.destroy()
+                    new_op = pulled
+                    extracted = True
+            except Exception:
+                pass  # extraction is best-effort; the wrapper still works
         if name:
             new_op.name = name
         new_op.nodeX = x
         new_op.nodeY = y
         return {'path': new_op.path, 'type': new_op.type, 'name': new_op.name,
-                'tox': file_path}
+                'tox': file_path, 'extracted': extracted}
 
     elif action == 'delete_op':
         path = data.get('path', '')
@@ -174,6 +194,18 @@ def _dispatch(action, data):
             raise Exception(f'Output operator not found: {out_path}')
         if not into_op:
             raise Exception(f'Input operator not found: {into_path}')
+        if in_index >= len(into_op.inputConnectors):
+            msg = (f'{into_path} has {len(into_op.inputConnectors)} data input '
+                   f'connector(s); in_index {in_index} is invalid.')
+            if into_op.isCOMP:
+                msg += (' Most COMPs (geoCOMP, cameraCOMP...) take no wired data '
+                        'inputs — create a selectPOP/inTOP INSIDE the COMP, point '
+                        'it at the source, and set its display/render flags '
+                        '(td_set_flags).')
+            raise Exception(msg)
+        if out_index >= len(out_op.outputConnectors):
+            raise Exception(f'{out_path} has {len(out_op.outputConnectors)} output '
+                            f'connector(s); out_index {out_index} is invalid.')
         out_op.outputConnectors[out_index].connect(into_op.inputConnectors[in_index])
         return {'connected': f'{out_path}[{out_index}] -> {into_path}[{in_index}]'}
 
@@ -269,6 +301,23 @@ def _dispatch(action, data):
                 f'case-sensitive.')
         par.pulse()
         return {'path': path, 'param': param, 'pulsed': True}
+
+    elif action == 'set_flags':
+        path = data.get('path', '')
+        target = op(path)
+        if not target:
+            raise Exception(f'Operator not found: {path}')
+        applied = {}
+        for flag in ('display', 'render', 'bypass', 'viewer', 'lock'):
+            if flag in data:
+                try:
+                    setattr(target, flag, bool(data[flag]))
+                    applied[flag] = bool(data[flag])
+                except Exception:
+                    raise Exception(f"{type(target).__name__} has no '{flag}' flag")
+        if not applied:
+            raise Exception('No flag given — pass display/render/bypass/viewer/lock.')
+        return {'path': path, 'flags': applied}
 
     elif action == 'timeline_play':
         op('/perform').par.play = 1

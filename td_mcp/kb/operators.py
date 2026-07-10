@@ -99,13 +99,28 @@ class OperatorsCatalog:
 
     def suggest_params(self, python_class: str, param: str, n: int = 5) -> list[str]:
         """Close matches for a misspelled param name on a known op class.
-        Empty when the class is unknown or the catalog predates enrichment."""
+        Empty when the class is unknown or the catalog predates enrichment.
+
+        Matches internal names by edit distance AND display labels by
+        substring — 'scale' finds sx/sy/sz (label "Scale") even though the
+        internal names share no letters with the query."""
         entry = self._by_class.get(python_class)
         if entry is None or not entry.params:
             return []
-        return difflib.get_close_matches(
+        q = param.lower()
+        label_exact = [p.name for p in entry.params if p.label.lower() == q]
+        by_name = difflib.get_close_matches(
             param, [p.name for p in entry.params], n=n, cutoff=0.4
         )
+        label_sub = [
+            p.name for p in entry.params
+            if p.label and (q in p.label.lower() or p.label.lower() in q)
+        ]
+        seen: list[str] = []
+        for name in label_exact + by_name + label_sub:
+            if name not in seen:
+                seen.append(name)
+        return seen[:n]
 
     def list(self, family: OpFamily | None = None) -> list[OperatorEntry]:
         if family is None:

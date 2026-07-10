@@ -385,7 +385,9 @@ async def td_delete_op(path: str) -> dict:
 _palette_roots_cache: dict[str, str] | None = None
 
 
-async def _palette_roots() -> dict[str, str]:
+async def _palette_roots() -> dict[str, str] | None:
+    """Palette folder paths from the live TD, or None when the bridge is
+    down (callers turn that into a 'call td_connect first' error)."""
     global _palette_roots_cache
     if _palette_roots_cache is None:
         probe = await _call(
@@ -393,8 +395,14 @@ async def _palette_roots() -> dict[str, str]:
             expression="__import__('json').dumps("
                        "{'builtin': app.paletteFolder, 'user': app.userPaletteFolder})",
         )
+        if not probe.get("ok") or "value" not in probe:
+            return None
         _palette_roots_cache = json.loads(probe["value"])
     return _palette_roots_cache
+
+
+_NO_BRIDGE = {"ok": False,
+              "error": "Bridge not connected — call td_connect first."}
 
 
 def _scan_palettes(roots: dict[str, str], source: str) -> list[dict]:
@@ -422,6 +430,8 @@ async def td_palette_list(query: str = "", source: str = "all",
     if source not in ("all", "builtin", "user"):
         return {"ok": False, "error": f"unknown source '{source}' (all|builtin|user)"}
     roots = await _palette_roots()
+    if roots is None:
+        return dict(_NO_BRIDGE)
     entries = filter_palette(_scan_palettes(roots, source), query)
     return {
         "ok": True,
@@ -450,6 +460,11 @@ async def td_palette_load(
     in both palettes. Unknown or ambiguous identifiers return close-match
     suggestions instead of hitting TD.
 
+    Derivative palette .tox files wrap the real component one level down
+    (icon + inner COMP); the bridge extracts the inner component
+    automatically, mirroring native palette drag & drop (`extracted: true`
+    in the result).
+
     Palette COMPs can be heavy (UI panels, engines, GPU pipelines) — after
     loading, td_op_info the result and snapshot before wiring it into the
     main graph, per the cook budget protocol.
@@ -459,6 +474,8 @@ async def td_palette_load(
         return {"ok": False, "error": gate["plan_warning"]}
 
     roots = await _palette_roots()
+    if roots is None:
+        return dict(_NO_BRIDGE)
     entries = _scan_palettes(roots, "all")
     entry, suggestions = resolve_tox(tox, entries)
     if entry is None:
@@ -531,6 +548,26 @@ async def td_set_param(path: str, param: str, value: int | float | str | bool) -
 async def td_pulse(path: str, param: str) -> dict:
     """Trigger a pulse-type parameter (e.g. a 'Reset' button)."""
     return await _call("pulse", path=path, param=param)
+
+
+@mcp.tool()
+async def td_set_flags(
+    path: str,
+    display: bool | None = None,
+    render: bool | None = None,
+    bypass: bool | None = None,
+    viewer: bool | None = None,
+    lock: bool | None = None,
+) -> dict:
+    """Set operator FLAGS (not parameters): display, render, bypass, viewer,
+    lock. Only the flags you pass are touched.
+
+    Key use: an op inside a geoCOMP needs display+render on to be drawn by
+    a renderTOP — geoCOMPs take no wired data inputs, so the idiom is a
+    selectPOP/inSOP inside the geo pointing at the source, flagged here.
+    """
+    return await _call("set_flags", path=path, display=display, render=render,
+                       bypass=bypass, viewer=viewer, lock=lock)
 
 
 # ─────────────────────────── python escape hatches ─────────────────────────

@@ -161,3 +161,22 @@ def test_param_entry_tolerates_none_label_and_style():
     p = ParamEntry.model_validate({"name": "x", "label": None, "style": None})
     assert p.label == ""
     assert p.style == ""
+
+
+def test_suggest_params_matches_display_labels():
+    """'scale' shares no prefix with sx/sy/sz — the label 'Scale' must
+    surface them (observed live: transformTOP 'scale' got zero suggestions)."""
+    catalog = OperatorsCatalog([
+        OperatorEntry(
+            python_class="transformTOP", family="TOP", subtype="transform",
+            params=[
+                ParamEntry(name="sx", label="Scale"),
+                ParamEntry(name="sy", label="Scale"),
+                ParamEntry(name="tx", label="Translate"),
+                ParamEntry(name="outputscale", label="Output Scale"),
+            ],
+        ),
+    ])
+    got = catalog.suggest_params("transformTOP", "scale")
+    assert got[0] == "sx"
+    assert "sy" in got

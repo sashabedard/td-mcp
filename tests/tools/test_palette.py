@@ -72,3 +72,31 @@ def test_resolve_typo_gets_close_matches():
     entry, sugg = resolve_tox("moviPlayer", _ENTRIES)
     assert entry is None
     assert "builtin:Tools/moviePlayer.tox" in sugg
+
+
+# ─────────────────────── server tools without a bridge ────────────────────────
+
+from unittest.mock import AsyncMock, patch
+
+from td_mcp import server
+from td_mcp.protocol import TDError
+
+
+async def test_palette_list_without_bridge_says_connect_first():
+    """A dead bridge raised KeyError 'value' (observed live after /mcp
+    reconnect); it must say what to do instead."""
+    server._palette_roots_cache = None
+    with patch.object(server.bridge, "send",
+                      new=AsyncMock(side_effect=TDError("not connected"))):
+        result = await server.td_palette_list()
+    assert result["ok"] is False
+    assert "td_connect" in result["error"]
+
+
+async def test_palette_load_without_bridge_says_connect_first():
+    server._palette_roots_cache = None
+    with patch.object(server.bridge, "send",
+                      new=AsyncMock(side_effect=TDError("not connected"))):
+        result = await server.td_palette_load("bloom")
+    assert result["ok"] is False
+    assert "td_connect" in result["error"]
