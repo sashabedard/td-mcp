@@ -75,6 +75,25 @@ A network the user cannot read is a network the user cannot maintain. After the 
 3. For anything the cluster detection cannot know — WHY a magic value was chosen, what an expression binding expects (e.g. "birthrate pulses on kick: play audio into audiodevin"), which op is the intended output — add a short note: a `textDAT` named `README` inside the COMP, or a comment on the relevant Annotate COMP.
 4. Never deliver a build where the user has to reverse-engineer `math3 → null7 → level12` to understand their own project. Organized + annotated is part of "done", same as rendering.
 
+## Tool argument names — exact, do not guess
+
+Argument names are NOT uniform across tools (live-tested: guessing burned 4
+calls in one session). The exact names:
+
+| Tool | Arguments |
+|---|---|
+| `td_get_network`, `td_layout_network` | `parent` (the COMP whose children you read/arrange; required for layout) |
+| `td_create_op` | `op_type`, `parent`, `name`, `x`, `y` |
+| `td_connect_ops` | `out`, `into`, `out_index`, `in_index` |
+| `td_set_param`, `td_pulse` | `path`, `param` (+ `value`) |
+| `td_op_info`, `td_delete_op` | `path` |
+| `td_snapshot` | `op_path` (+ `max_size`) |
+| `td_visual_diff` | `op_path`, `reference_path` |
+| `td_checkpoint` | `comp_path`, `label` |
+| `td_rollback` | `checkpoint_id` |
+| `td_expr` | `expression` |
+| `td_run_script` | `code` |
+
 ## Hard rules
 
 - Never write `op('X').par.Y = Z` from memory. Confirm the param name via `kb_get_operator` (enriched catalog: names, labels, menu tokens — no TD roundtrip) or `td_op_info` (live current values). A failed `td_set_param` returns close-match suggestions — read them instead of guessing again.
@@ -103,3 +122,4 @@ If the user reports an op that should exist but isn't in the catalog, run `kb_re
 - Setting a param to `None` or `""` doesn't always reset to default. Use `op('X').par.Y = op('X').par.Y.default` via `td_run_script` if needed.
 - `comp.save(file_path)` exports a `.tox` of the COMP only (not the whole project). `project.save()` saves the `.toe`. Both are exposed via `td_checkpoint` and `td_save_project` respectively.
 - WebServer DAT in TD does not implement the WebSocket ping/pong protocol — the td-mcp bridge already works around this with `ping_interval=None`, but if you write your own WS client to TD you'll hit the same issue.
+- `td_rollback` replaces the COMP wholesale from the .tox: paths stay valid but every param, position and rename inside reverts to checkpoint state. Re-run `td_get_network` before mutating further — cached assumptions about the network are stale after a rollback.

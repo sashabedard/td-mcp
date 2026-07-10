@@ -106,3 +106,40 @@ def test_no_token_file_allows_local_dev(tmp_path):
 
     resp = _receive(mod, {"id": 1, "action": "run_script", "data": {"code": "print('ok')"}})
     assert resp["ok"] is True
+
+
+# ─────────────────────────── set_param / pulse errors ────────────────────────
+
+
+class _FakeParCollection:
+    """Mimics td's OP.par: subscript with an unknown name returns None."""
+    def __getitem__(self, name):
+        return None
+
+
+class _FakeOp:
+    path = "/project1/fake"
+    def __init__(self):
+        self.par = _FakeParCollection()
+
+
+def test_set_param_unknown_param_is_a_named_error():
+    """par[unknown] returns None in TD; '.val' on it raised the opaque
+    "'NoneType' object has no attribute 'val'" — the error must instead
+    name the param and the op so catalog suggestions can kick in."""
+    mod = _load_callbacks()
+    mod.op = lambda path: _FakeOp()
+    with pytest.raises(Exception) as exc_info:
+        mod._dispatch("set_param", {"path": "/project1/fake",
+                                    "param": "wrongname", "value": 1})
+    msg = str(exc_info.value)
+    assert "wrongname" in msg
+    assert "/project1/fake" in msg
+
+
+def test_pulse_unknown_param_is_a_named_error():
+    mod = _load_callbacks()
+    mod.op = lambda path: _FakeOp()
+    with pytest.raises(Exception) as exc_info:
+        mod._dispatch("pulse", {"path": "/project1/fake", "param": "resett"})
+    assert "resett" in str(exc_info.value)

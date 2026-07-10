@@ -77,7 +77,7 @@ async def test_td_layout_network_empty_returns_empty_diff():
     with patch("td_mcp.server.bridge") as fake_bridge:
         fake_bridge.send = AsyncMock(side_effect=[fake_network])
         from td_mcp.server import td_layout_network
-        result = await td_layout_network(path="/", mode="grid_annotated")
+        result = await td_layout_network(parent="/", mode="grid_annotated")
         assert result["ok"] is True
         assert result["diff"]["moved"] == []
 
@@ -108,7 +108,7 @@ async def test_td_layout_network_simple_chain_moves_ops(tmp_path):
     server._project_folder_cache = None
     server._checkpoints.clear()
     with patch.object(server.bridge, "send", new=AsyncMock(side_effect=fake_send)):
-        result = await server.td_layout_network(path="/p", mode="grid")
+        result = await server.td_layout_network(parent="/p", mode="grid")
         assert result["ok"] is True
         assert len(result["diff"]["moved"]) == 2
         assert result["diff"]["checkpoint_id"].startswith("cp_")
@@ -146,7 +146,7 @@ async def test_td_layout_network_checkpoint_is_rollbackable(tmp_path):
     server._project_folder_cache = None
     server._checkpoints.clear()
     with patch.object(server.bridge, "send", new=AsyncMock(side_effect=fake_send)):
-        result = await server.td_layout_network(path="/p", mode="grid")
+        result = await server.td_layout_network(parent="/p", mode="grid")
         assert result["ok"] is True
         cid = result["diff"]["checkpoint_id"]
         assert cid, "layout must return a usable checkpoint id"

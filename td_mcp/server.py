@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, get_args
 
 from mcp.server.fastmcp import FastMCP, Image
+from pydantic import ValidationError
 
 from td_mcp import __version__
 from td_mcp.bridge import bridge
@@ -746,7 +747,7 @@ try:
                         inst = scratch.create(getattr(td, clsname))
                         params = []
                         for p in inst.pars():
-                            d = {{'name': p.name, 'label': p.label, 'style': p.style}}
+                            d = {{'name': p.name, 'label': p.label or '', 'style': p.style or ''}}
                             try:
                                 menu = list(p.menuNames)
                                 if menu:
@@ -781,7 +782,14 @@ print(path)
     finally:
         tmp_path.unlink(missing_ok=True)
 
-    entries = [OperatorEntry.model_validate(e) for e in data["operators"]]
+    entries, skipped = [], []
+    for e in data["operators"]:
+        try:
+            entries.append(OperatorEntry.model_validate(e))
+        except ValidationError as exc:
+            # One malformed op must not kill the whole refresh.
+            skipped.append({"python_class": e.get("python_class", "?"),
+                            "error": str(exc).splitlines()[0]})
     entries.sort(key=lambda e: (e.family, e.python_class))
     catalog = OperatorsCatalog(entries, td_build=data.get("build", ""))
     catalog.save()
@@ -793,6 +801,7 @@ print(path)
         "with_params": with_params,
         "td_build": data.get("build", ""),
         "by_family": catalog.family_counts(),
+        **({"skipped": skipped} if skipped else {}),
         **({"next_step": "kb_index_update folds enriched op chunks into the vector index."}
            if with_params else {}),
     }
@@ -1412,23 +1421,28 @@ async def kb_get_vj_loop_reference(query: str = "", top_k: int = 3) -> dict:
 
 
 @mcp.tool()
-async def td_layout_network(path: str = "/project1", mode: str = "grid_annotated") -> dict:
+async def td_layout_network(parent: str, mode: str = "grid_annotated") -> dict:
     """Reorganize a TD network: topological grid, optional cluster annotations
     and semantic renaming of generic ops.
+
+    `parent` is the COMP whose CHILDREN get laid out (same convention as
+    td_get_network). Required on purpose: a defaulted target once made a
+    silently-misnamed argument reorganize /project1 instead of the intended
+    COMP.
 
     Modes:
     - "grid": geometric grid only (move ops on a column-by-family grid)
     - "grid_annotated": grid + cluster Annotate COMPs + generic-name renaming
 
-    Takes a comp-scoped .tox checkpoint of `path` before applying changes;
-    the returned diff carries its checkpoint id for td_rollback. `path`
+    Takes a comp-scoped .tox checkpoint of `parent` before applying changes;
+    the returned diff carries its checkpoint id for td_rollback. `parent`
     must therefore be a COMP below root (like td_checkpoint) — laying out
     "/" directly is not supported.
     """
     if mode not in ("grid", "grid_annotated"):
         return {"ok": False, "error": f"unknown mode '{mode}'"}
 
-    network = await _call("get_network", path=path)
+    network = await _call("get_network", path=parent)
     if not network.get("ok"):
         return network
     ops = network.get("ops", [])
@@ -1481,14 +1495,14 @@ async def td_layout_network(path: str = "/project1", mode: str = "grid_annotated
         for o in ops:
             new_name = propose_rename(o, upstream_types_by_op[o["path"]])
             if new_name:
-                parent = o["path"].rsplit("/", 1)[0]
+                parent_dir = o["path"].rsplit("/", 1)[0]
                 renames.append(OperatorRename(
                     old_path=o["path"],
-                    new_path=f"{parent}/{new_name}",
+                    new_path=f"{parent_dir}/{new_name}",
                     reason=f"generic name + upstream {upstream_types_by_op[o['path']]}",
                 ))
 
-    ckpt = await _take_checkpoint(path, label=f"pre-layout {path}")
+    ckpt = await _take_checkpoint(parent, label=f"pre-layout {parent}")
     if not ckpt.get("ok"):
         return ckpt
     checkpoint_id = ckpt.get("id", "")
@@ -1498,7 +1512,7 @@ async def td_layout_network(path: str = "/project1", mode: str = "grid_annotated
         "renames": [r.model_dump() for r in renames],
         "annotations": [a.model_dump() for a in annotations],
     }
-    apply_result = await _call("apply_layout", path=path, **apply_payload)
+    apply_result = await _call("apply_layout", path=parent, **apply_payload)
     if not apply_result.get("ok"):
         return apply_result
 

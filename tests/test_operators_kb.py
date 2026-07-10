@@ -153,3 +153,11 @@ def test_suggest_params_catches_typo(enriched_catalog: OperatorsCatalog):
 def test_suggest_params_unknown_class_or_unenriched(enriched_catalog: OperatorsCatalog):
     assert enriched_catalog.suggest_params("nopeTOP", "x") == []
     assert enriched_catalog.suggest_params("bareCHOP", "x") == []
+
+
+def test_param_entry_tolerates_none_label_and_style():
+    """TD returns None for label/style on some params (header rows,
+    python-only pars) — a single None killed whole catalog refreshes."""
+    p = ParamEntry.model_validate({"name": "x", "label": None, "style": None})
+    assert p.label == ""
+    assert p.style == ""

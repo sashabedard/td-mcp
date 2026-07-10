@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from td_mcp.util import write_json_atomic
 
@@ -38,6 +38,13 @@ class ParamEntry(BaseModel):
     label: str = ""
     style: str = ""
     menu_names: list[str] = []
+
+    # TD returns None for label/style on some params (e.g. header rows,
+    # python-only pars); a single None must not kill a whole catalog refresh.
+    @field_validator("label", "style", mode="before")
+    @classmethod
+    def _none_to_empty(cls, v):
+        return "" if v is None else v
 
 
 class OperatorEntry(BaseModel):

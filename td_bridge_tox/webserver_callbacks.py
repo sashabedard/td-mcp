@@ -226,7 +226,13 @@ def _dispatch(action, data):
         target = op(path)
         if not target:
             raise Exception(f'Operator not found: {path}')
-        target.par[param].val = value
+        par = target.par[param]
+        if par is None:
+            raise Exception(
+                f"Unknown parameter '{param}' on {path} "
+                f'({type(target).__name__}). Param names are internal names, '
+                f'case-sensitive.')
+        par.val = value
         return {'path': path, 'param': param, 'value': value}
 
     elif action == 'pulse':
@@ -235,7 +241,13 @@ def _dispatch(action, data):
         target = op(path)
         if not target:
             raise Exception(f'Operator not found: {path}')
-        target.par[param].pulse()
+        par = target.par[param]
+        if par is None:
+            raise Exception(
+                f"Unknown parameter '{param}' on {path} "
+                f'({type(target).__name__}). Param names are internal names, '
+                f'case-sensitive.')
+        par.pulse()
         return {'path': path, 'param': param, 'pulsed': True}
 
     elif action == 'timeline_play':
