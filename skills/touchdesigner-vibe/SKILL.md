@@ -10,6 +10,21 @@ Vibe mode is short-loop iteration with visual feedback. Speed and approximation 
 
 ## Reference grounding
 
+**Reference is a YouTube video the KB has ingested?** The scene-detected
+keyframes are ALREADY ON DISK: `~/.cache/td-mcp/youtube/<channel>/<video_id>/keyframes/kf_*.png`
+(filenames are milliseconds). Read 2-3 of them BEFORE the first judgment
+snapshot — intro frames (~first 30s) usually show the finished look, end
+frames show the final composite. Lesson learned live (dust terrain,
+ZW-rkNnFQMg): every transcript value was applied correctly and the render
+still looked "pas du tout" like the video — the transcript carries *values*,
+never the *look*. What only the pixels carry: material rendering (emission,
+alpha/blending), camera framing, perceived density at working resolution.
+On any render-look conflict, the keyframes win over the transcript.
+Also read the scene's UP AXIS off the keyframes before placing camera and
+lights: a chain that displaces P.z "upward" means +Z is up, not +Y, and a
+camera/light rig placed Y-up reads as a face-on wall (cost one full cycle,
+live: Fluid Point Surface, splash along +Z).
+
 When the user mentions a **VJ loop** (or boucle visuelle / loop), call
 `kb_get_vj_loop_reference(query=<their description>)` *before* creating
 ops. The returned patterns carry the canonical operator chains and (if
