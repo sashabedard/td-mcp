@@ -150,6 +150,155 @@ def test_download_audio_ignores_partial_files(tmp_path: Path):
     assert result.name == "audio.m4a"
 
 
+def test_list_channel_videos_reads_playlist_channel_not_channel():
+    """--flat-playlist never fills the per-entry channel field; it prints
+    "NA" for every video. Reading it attributed 133 of 152 cached videos to
+    a channel called "NA", and that string is embedded into chunk text.
+    playlist_channel is the field that actually carries the name here."""
+    from td_mcp.ingest.youtube import list_channel_videos
+
+    SEP = "\x1f"
+    line = SEP.join(["vid1", "612.0", "Okamirufu Vizualizer", "https://y/vid1", "A | B"])
+    with patch("td_mcp.ingest.youtube.subprocess.check_output", return_value=line) as co:
+        videos = list_channel_videos("https://youtube.com/@x/videos")
+
+    template = co.call_args[0][0][co.call_args[0][0].index("--print") + 1]
+    assert "%(playlist_channel)s" in template
+    assert "%(channel)s" not in template
+    # Title last: it is the only free-text field, so its content cannot
+    # shift channel or url out of position.
+    assert template.rindex("%(title)s") > template.rindex("%(webpage_url)s")
+    assert videos[0].channel == "Okamirufu Vizualizer"
+    assert videos[0].url == "https://y/vid1"
+    assert videos[0].title == "A | B"
+    assert videos[0].duration_sec == 612.0
+
+
+def test_attribution_pairs_display_name_with_handle():
+    """The attribution string is embedded, so it is what channel-name
+    search matches. Neither half suffices alone: legacy records carry "NA"
+    as the display name, and Derivative's channel is literally named
+    "TouchDesigner", which discriminates nothing."""
+    from td_mcp.ingest.youtube import _attribution
+
+    def meta_with(channel):
+        return VideoMeta("v", "t", 1.0, channel, "https://y/v")
+
+    assert _attribution(meta_with("TouchDesigner"), "Derivative") == "TouchDesigner (Derivative)"
+    # Legacy "NA" and empties fall back to the handle rather than embedding junk.
+    assert _attribution(meta_with("NA"), "OkamirufuV") == "OkamirufuV"
+    assert _attribution(meta_with(""), "@paketa12") == "paketa12"
+    # No redundant "paketa12 (paketa12)".
+    assert _attribution(meta_with("paketa12"), "paketa12") == "paketa12"
+    # Some channels put the handle inside the display name already —
+    # elekktronaut's is literally "bileam tschepe (elekktronaut)". Appending
+    # it again would embed "... (elekktronaut) (elekktronaut)".
+    assert (
+        _attribution(meta_with("bileam tschepe (elekktronaut)"), "elekktronaut")
+        == "bileam tschepe (elekktronaut)"
+    )
+
+
+def test_download_cmd_bakes_in_no_volatile_workaround():
+    """YouTube workarounds expire. The 2026-07 pair (web_safari client +
+    proto:m3u8 sort) had both gone stale by 2026-08, web_safari returning
+    zero formats. Volatile choices belong in the attempt chain, never
+    welded into the command builder. A video id starting with '-' must also
+    survive as an argument, not be read as a flag."""
+    from td_mcp.ingest.youtube import _ytdlp_cmd
+
+    url = "https://youtu.be/-aCBi1r3AaI"
+    cmd = _ytdlp_cmd(
+        url,
+        "/tmp/audio.%(ext)s",
+        "bestaudio[ext=m4a]/bestaudio/best",
+        cookies_browser="",
+        player_client="",
+    )
+    assert "--extractor-args" not in cmd
+    assert "-S" not in cmd
+    assert "--cookies-from-browser" not in cmd
+    assert "bestaudio[ext=m4a]/bestaudio/best" in cmd
+    assert cmd[cmd.index("--") + 1] == url
+
+
+def test_download_audio_walks_client_chain_until_one_delivers(tmp_path: Path, monkeypatch):
+    """Some player clients advertise a format and then 403 on the bytes
+    (android_vr, observed 2026-08), so yt-dlp's own rotation fails
+    intermittently. The chain must keep going and stop at the first client
+    that actually writes audio."""
+    monkeypatch.setattr(
+        "td_mcp.ingest.youtube.YTDLP_PLAYER_CLIENTS", ["bad", "alsobad", "good"]
+    )
+    monkeypatch.setattr("td_mcp.ingest.youtube.YTDLP_COOKIES_BROWSER", "")
+    vdir = tmp_path / "chan" / "abc123"
+    tried = []
+
+    def fake_run(cmd, **kwargs):
+        client = cmd[cmd.index("--extractor-args") + 1]
+        tried.append(client)
+
+        class R:
+            returncode = 0 if client.endswith("=good") else 1
+            stderr = "HTTP Error 403: Forbidden"
+
+        if R.returncode == 0:
+            (vdir / "audio.m4a").write_bytes(b"audio")
+        return R()
+
+    with patch("td_mcp.ingest.youtube.subprocess.run", side_effect=fake_run):
+        result = download_audio(_meta(), "chan", cache_dir=tmp_path)
+
+    assert tried == [
+        "youtube:player_client=bad",
+        "youtube:player_client=alsobad",
+        "youtube:player_client=good",
+    ]
+    assert result.name == "audio.m4a"
+
+
+def test_download_audio_tries_cookies_last(tmp_path: Path, monkeypatch):
+    """A stale browser jar is worse than none — YouTube degrades the
+    session to images-only instead of refusing it. Cookies are therefore a
+    last resort, never the opening move."""
+    monkeypatch.setattr("td_mcp.ingest.youtube.YTDLP_PLAYER_CLIENTS", ["one", "two"])
+    monkeypatch.setattr("td_mcp.ingest.youtube.YTDLP_COOKIES_BROWSER", "chrome")
+    used_cookies = []
+
+    def fake_run(cmd, **kwargs):
+        used_cookies.append("--cookies-from-browser" in cmd)
+
+        class R:
+            returncode = 1
+            stderr = "nope"
+
+        return R()
+
+    with patch("td_mcp.ingest.youtube.subprocess.run", side_effect=fake_run):
+        with pytest.raises(RuntimeError):
+            download_audio(_meta(), "chan", cache_dir=tmp_path)
+
+    assert used_cookies == [False, False, True]
+
+
+def test_download_audio_surfaces_ytdlp_stderr(tmp_path: Path, monkeypatch):
+    """A bare CalledProcessError hides why yt-dlp failed, which is the one
+    thing needed to tell an expired workaround from a private video."""
+    monkeypatch.setattr("td_mcp.ingest.youtube.YTDLP_PLAYER_CLIENTS", ["only"])
+    monkeypatch.setattr("td_mcp.ingest.youtube.YTDLP_COOKIES_BROWSER", "")
+
+    def fake_run(cmd, **kwargs):
+        class R:
+            returncode = 1
+            stderr = "ERROR: Requested format is not available"
+
+        return R()
+
+    with patch("td_mcp.ingest.youtube.subprocess.run", side_effect=fake_run):
+        with pytest.raises(RuntimeError, match="Requested format is not available"):
+            download_audio(_meta(), "chan", cache_dir=tmp_path)
+
+
 @pytest.mark.asyncio
 async def test_ingest_channel_batch_survives_one_bad_video(monkeypatch):
     """One private/deleted video must not abort the whole batch."""

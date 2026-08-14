@@ -308,3 +308,95 @@ async def test_vision_tool_limit_caps_attempts_not_successes(tmp_path, monkeypat
         await server.kb_ingest_tutorial_vision(limit=1)
 
     assert len(attempts) == 1, f"limit=1 attempted {len(attempts)} videos"
+
+
+def test_download_video_walks_client_chain_and_reports_why_it_failed(tmp_path, monkeypatch):
+    """The video download carried the same three expired YouTube workarounds
+    as the audio path (cookies + web_safari + proto:m3u8), and swallowed
+    stderr before returning None — so a batch would fail all 37 downloads
+    silently and the vision pass would produce nothing. It must walk the
+    shared client chain, and a total failure must name yt-dlp's own reason."""
+    from td_mcp.ingest.tutorial_vision import download_video
+    from td_mcp.ingest.youtube import VideoMeta
+
+    monkeypatch.setattr("td_mcp.ingest.youtube.YTDLP_PLAYER_CLIENTS", ["bad", "good"])
+    monkeypatch.setattr("td_mcp.ingest.youtube.YTDLP_COOKIES_BROWSER", "")
+    meta = VideoMeta("abc123", "t", 60.0, "chan", "https://youtu.be/abc123")
+    vdir = tmp_path / "chan" / "abc123"
+    tried = []
+
+    def fake_run(cmd, **kwargs):
+        assert "-S" not in cmd, "proto:m3u8 sort is an expired workaround"
+        tried.append(cmd[cmd.index("--extractor-args") + 1])
+
+        class R:
+            returncode = 0 if "good" in tried[-1] else 1
+            stderr = "HTTP Error 403: Forbidden"
+
+        if R.returncode == 0:
+            vdir.mkdir(parents=True, exist_ok=True)
+            (vdir / "video.mp4").write_bytes(b"video")
+        return R()
+
+    with patch("td_mcp.ingest.youtube.subprocess.run", side_effect=fake_run):
+        result = download_video(meta, "chan", cache_dir=tmp_path)
+
+    assert tried == ["youtube:player_client=bad", "youtube:player_client=good"]
+    assert result is not None and result.name == "video.mp4"
+
+
+def test_download_video_returns_none_but_logs_the_real_error(tmp_path, monkeypatch, caplog):
+    """A dead video must not abort a 37-video batch — but the operator needs
+    yt-dlp's diagnosis, not a bare CalledProcessError."""
+    from td_mcp.ingest.tutorial_vision import download_video
+    from td_mcp.ingest.youtube import VideoMeta
+
+    monkeypatch.setattr("td_mcp.ingest.youtube.YTDLP_PLAYER_CLIENTS", ["only"])
+    monkeypatch.setattr("td_mcp.ingest.youtube.YTDLP_COOKIES_BROWSER", "")
+    meta = VideoMeta("abc123", "t", 60.0, "chan", "https://youtu.be/abc123")
+
+    def fake_run(cmd, **kwargs):
+        class R:
+            returncode = 1
+            stderr = "ERROR: Private video"
+
+        return R()
+
+    with patch("td_mcp.ingest.youtube.subprocess.run", side_effect=fake_run):
+        with caplog.at_level("WARNING"):
+            result = download_video(meta, "chan", cache_dir=tmp_path)
+
+    assert result is None
+    assert "Private video" in caplog.text
+
+
+def test_vision_chunks_use_the_same_attribution_as_transcript_chunks(tmp_path):
+    """Both chunk families are embedded and both are searched by channel
+    name, so they must name the channel the same way. The transcript path
+    pairs display name with handle (_attribution); the vision path used the
+    raw meta.channel, so the two halves of one video disagreed — and a
+    legacy record whose channel is "NA" stayed unfindable on the vision
+    side even after the transcript side was fixed."""
+    import json as _json
+
+    from td_mcp.ingest.tutorial_vision import build_chunks_from_techniques
+    from td_mcp.ingest.youtube import VideoMeta
+
+    vdir = tmp_path / "OkamirufuV" / "vid1"
+    vdir.mkdir(parents=True)
+    (vdir / "techniques.json").write_text(_json.dumps({
+        "video_id": "vid1",
+        "model": "m",
+        "segments": {"0": {
+            "status": "ok",
+            "start": 0.0,
+            "end": 10.0,
+            "extraction": {"technique": "T", "summary": "s", "operators": []},
+        }},
+    }))
+    meta = VideoMeta("vid1", "Title", 10.0, "NA", "https://youtu.be/vid1")
+
+    chunks = build_chunks_from_techniques(meta, "OkamirufuV", cache_dir=tmp_path)
+
+    assert chunks and "from OkamirufuV —" in chunks[0].text
+    assert "from NA" not in chunks[0].text

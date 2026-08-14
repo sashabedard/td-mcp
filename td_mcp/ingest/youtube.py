@@ -38,10 +38,28 @@ DEFAULT_CACHE_DIR = Path(
 )
 DEFAULT_WHISPER_MODEL = os.environ.get("TD_MCP_WHISPER_MODEL", "base")
 SOURCES_CONFIG = Path(__file__).parent.parent / "kb" / "data" / "youtube_sources.json"
-# YouTube bot-checks anonymous downloads and 403s DASH data (SABR gating,
-# observed 2026-07). Same workaround as tutorial_vision: browser cookies +
-# web_safari client + HLS. Flat-playlist listing still works anonymously.
+# YouTube's anti-bot behaviour changes every few months, so nothing here is
+# hardcoded. The 2026-07 workaround (browser cookies + web_safari client +
+# HLS) had fully expired by 2026-08: web_safari now returns no formats at
+# all, and *stale* browser cookies are worse than none — YouTube degrades
+# the session to images-only instead of refusing it outright. Empty defaults
+# let yt-dlp rotate player clients on its own, which is what works now.
+# Set these only when a specific breakage demands it.
 YTDLP_COOKIES_BROWSER = os.environ.get("TD_MCP_YTDLP_COOKIES_BROWSER", "")
+YTDLP_FORMAT_SORT = os.environ.get("TD_MCP_YTDLP_FORMAT_SORT", "")
+# Fallback chain rather than a single pinned client: YouTube's posture
+# shifts week to week (during one 2026-08 session 'web' went from working
+# to failing within minutes), and some clients hand back format metadata
+# they then 403 on — android_vr advertises format 140 and refuses the
+# bytes, which is why yt-dlp's own rotation fails intermittently. Tried in
+# order, first one to actually deliver audio wins. Trailing "" = no
+# extractor arg, i.e. let yt-dlp rotate on its own as a last resort.
+YTDLP_PLAYER_CLIENTS = [
+    c.strip()
+    for c in os.environ.get(
+        "TD_MCP_YTDLP_PLAYER_CLIENTS", "web_embedded,mweb,android,"
+    ).split(",")
+]
 
 
 @dataclass
@@ -74,6 +92,13 @@ def list_channel_videos(channel_url: str, limit: int | None = None) -> list[Vide
     """Use yt-dlp's flat-playlist mode to enumerate videos without downloading."""
     # ASCII Unit Separator (0x1f) won't appear in YouTube titles (which often
     # contain '|' as a separator), so it's safe as a field delimiter.
+    # The title goes LAST as defence in depth: it is the only free-text
+    # field, so anything it smuggles past the delimiter (a newline splits
+    # one logical row across two printed lines) can only truncate the title
+    # instead of shifting channel and url out of alignment. Three cached
+    # records still carry that damage from the era when '|' was the
+    # delimiter — a corrupt url is the costly one, since chunks cite
+    # f"{meta.url}&t=..." and a mangled url is a dead source link.
     SEP = "\x1f"
     cmd = ["yt-dlp", "--quiet"]
     if YTDLP_COOKIES_BROWSER:
@@ -81,7 +106,12 @@ def list_channel_videos(channel_url: str, limit: int | None = None) -> list[Vide
     cmd += [
         "--flat-playlist",
         "--print",
-        f"%(id)s{SEP}%(title)s{SEP}%(duration)s{SEP}%(channel)s{SEP}%(webpage_url)s",
+        # playlist_channel, NOT channel: --flat-playlist never populates the
+        # per-entry channel field, it prints "NA" for every video on every
+        # channel. That silently attributed 133 of 152 cached videos to a
+        # channel named "NA" — and the attribution is embedded into chunk
+        # text, so those videos were unfindable by channel name.
+        f"%(id)s{SEP}%(duration)s{SEP}%(playlist_channel)s{SEP}%(webpage_url)s{SEP}%(title)s",
     ]
     if limit:
         cmd.extend(["--playlist-end", str(limit)])
@@ -95,7 +125,7 @@ def list_channel_videos(channel_url: str, limit: int | None = None) -> list[Vide
         parts = line.split(SEP, 4)
         if len(parts) != 5:
             continue
-        vid, title, duration, channel, url = parts
+        vid, duration, channel, url, title = parts
         try:
             dur = float(duration) if duration and duration != "NA" else 0.0
         except ValueError:
@@ -123,6 +153,76 @@ def _cached_audio(vdir: Path) -> Path | None:
     return None
 
 
+def _ytdlp_cmd(
+    url: str,
+    out_template: str,
+    format_selector: str,
+    *,
+    cookies_browser: str,
+    player_client: str,
+) -> list[str]:
+    cmd = ["yt-dlp", "--quiet"]
+    if cookies_browser:
+        cmd += ["--cookies-from-browser", cookies_browser]
+    if player_client:
+        cmd += ["--extractor-args", f"youtube:player_client={player_client}"]
+    if YTDLP_FORMAT_SORT:
+        cmd += ["-S", YTDLP_FORMAT_SORT]
+    # "--" so a video id beginning with '-' isn't parsed as a flag.
+    cmd += ["-f", format_selector, "-o", out_template, "--", url]
+    return cmd
+
+
+def _download_attempts() -> list[tuple[str, str]]:
+    """(cookies_browser, player_client) pairs to try, in order.
+
+    Anonymous first across the whole client chain. Cookies come last and
+    only if configured: a browser jar rotates and goes stale silently, and
+    YouTube answers a stale jar by degrading the session to images-only
+    rather than refusing it — worse than sending no cookies at all.
+    """
+    attempts = [("", client) for client in YTDLP_PLAYER_CLIENTS]
+    if YTDLP_COOKIES_BROWSER:
+        attempts.append((YTDLP_COOKIES_BROWSER, YTDLP_PLAYER_CLIENTS[0]))
+    return attempts
+
+
+def run_ytdlp_download(
+    url: str, out_template: str, format_selector: str, *, timeout: int = 1800
+) -> None:
+    """Download `url` with yt-dlp, walking the player-client fallback chain.
+
+    Shared by the audio and video paths deliberately: the two had separate
+    copies of the same hardcoded workaround, so the 2026-07 arguments went
+    stale in both places at once and only one got fixed. One chain, one
+    place to update when YouTube shifts again.
+
+    Raises RuntimeError carrying each attempt's stderr — callers decide
+    whether that's fatal or a video to skip.
+    """
+    errors = []
+    for cookies_browser, player_client in _download_attempts():
+        cmd = _ytdlp_cmd(
+            url,
+            out_template,
+            format_selector,
+            cookies_browser=cookies_browser,
+            player_client=player_client,
+        )
+        proc = subprocess.run(
+            cmd, stderr=subprocess.PIPE, text=True, timeout=timeout, check=False
+        )
+        if proc.returncode == 0:
+            return
+        label = player_client or "auto"
+        if cookies_browser:
+            label += f"+cookies:{cookies_browser}"
+        errors.append(f"[{label}] {(proc.stderr or '').strip()[-200:] or 'no stderr'}")
+    raise RuntimeError(
+        f"yt-dlp failed for {url} after {len(errors)} attempts: " + " | ".join(errors)
+    )
+
+
 def download_audio(meta: VideoMeta, channel_handle: str, cache_dir: Path = DEFAULT_CACHE_DIR) -> Path:
     """Download bestaudio as m4a. Skip if already cached — including when
     yt-dlp fell back to another container (.webm): resume must not hit the
@@ -139,19 +239,11 @@ def download_audio(meta: VideoMeta, channel_handle: str, cache_dir: Path = DEFAU
     if cached is not None:
         return cached
 
-    cmd = ["yt-dlp", "--quiet"]
-    if YTDLP_COOKIES_BROWSER:
-        cmd += ["--cookies-from-browser", YTDLP_COOKIES_BROWSER]
-    cmd += [
-        "--extractor-args", "youtube:player_client=web_safari",
-        "-f",
-        "bestaudio[ext=m4a]/bestaudio/best",
-        "-S", "proto:m3u8",
-        "-o",
-        str(audio_path).replace(".m4a", ".%(ext)s"),
+    run_ytdlp_download(
         meta.url,
-    ]
-    subprocess.check_call(cmd, stderr=subprocess.DEVNULL, timeout=1800)
+        str(audio_path).replace(".m4a", ".%(ext)s"),
+        "bestaudio[ext=m4a]/bestaudio/best",
+    )
 
     # yt-dlp may have written a different extension if m4a wasn't available
     cached = _cached_audio(vdir)
@@ -223,6 +315,27 @@ def _segment_into_chunks(transcript: dict, max_words: int = 400) -> list[tuple[f
     return chunks
 
 
+def _attribution(meta: VideoMeta, channel_handle: str) -> str:
+    """How a chunk names its channel — this string is embedded, so it is
+    what channel-name search actually matches against.
+
+    Carries the handle alongside the display name because neither alone is
+    sufficient: legacy records hold a useless display name ("NA"), while
+    some real names are poor discriminators (Derivative's channel is
+    literally called "TouchDesigner"). The handle comes from the cache
+    folder, which is authoritative by construction.
+    """
+    handle = _safe_handle(channel_handle)
+    display = (meta.channel or "").strip()
+    if not display or display == "NA":
+        return handle
+    # Several channels already carry the handle in their display name
+    # ("bileam tschepe (elekktronaut)"), so appending it would double it.
+    if handle.lower() in display.lower():
+        return display
+    return f"{display} ({handle})"
+
+
 def build_chunks_from_video(meta: VideoMeta, channel_handle: str, cache_dir: Path = DEFAULT_CACHE_DIR) -> list[Chunk]:
     """Read a cached transcript and produce vector-KB chunks."""
     vdir = _video_dir(channel_handle, meta.video_id, cache_dir)
@@ -241,7 +354,7 @@ def build_chunks_from_video(meta: VideoMeta, channel_handle: str, cache_dir: Pat
                 source="tutorial",
                 source_url=f"{meta.url}&t={int(start)}s",
                 title=f"{meta.title} {timestamp}",
-                text=f"{timestamp} (from {meta.channel} — {meta.title})\n\n{text}",
+                text=f"{timestamp} (from {_attribution(meta, channel_handle)} — {meta.title})\n\n{text}",
             )
         )
     return chunks
