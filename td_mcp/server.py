@@ -1037,12 +1037,22 @@ async def kb_search(
     source: str | None = None,
     family: str | None = None,
     is_glsl: bool | None = None,
+    rerank: bool | None = None,
 ) -> dict:
     """Semantic search across the indexed KB corpus (operators + GLSL templates + POP patterns).
 
-    Returns top-k chunks ranked by vector similarity to the query, with
-    optional pre-filtering by source ∈ {operators, glsl_template, pop_pattern, ...},
+    Returns top-k chunks, with optional pre-filtering by
+    source ∈ {operators, glsl_template, pop_pattern, ...},
     family ∈ {CHOP, TOP, SOP, POP, ...}, or is_glsl.
+
+    Ranked by vector similarity. `rerank=True` adds a cross-encoder second
+    stage (bge-reranker-v2-m3) that rescores each (query, chunk) pair and
+    keeps the best k — worth trying when vector order looks off, but OFF by
+    default: measured on this corpus it cut practical tutorial chunks in the
+    top-3 from 10/30 to 7/30 and cost 47ms -> 1694ms per search, because it
+    favours encyclopedic wiki passages over conversational tutorial
+    transcripts. TD_MCP_RERANK=1 enables it globally. Results carry
+    `_distance`, plus `_rerank_score` when reranked.
 
     Requires the vector index to be built — run kb_reindex first if you get
     an empty result. The embedding model loads lazily on first call (BGE-M3
@@ -1071,7 +1081,13 @@ async def kb_search(
     # to_thread: query embedding is seconds of synchronous CPU — running it
     # on the event loop freezes every other tool AND the bridge reader.
     results = await asyncio.to_thread(
-        kb.search, query, k=k, source=source, family=family, is_glsl=is_glsl
+        kb.search,
+        query,
+        k=k,
+        source=source,
+        family=family,
+        is_glsl=is_glsl,
+        rerank=rerank,
     )
     return {
         "ok": True,

@@ -32,7 +32,9 @@ python scripts/install_skills.py         # copies 3 SKILL.md into ~/.claude/skil
 - **Plan & safety** — `td_plan` (KB-grounded staging, gap protocol), `td_checkpoint` / `td_rollback` / `td_list_checkpoints` (comp-scoped `.tox` snapshots, FIFO 20), `td_layout_network` (topological grid over wire **and** param-reference edges, so networks read left-to-right like hand-built projects; cluster annotations + semantic renames, checkpointed)
 - **Visual loop & perf** — `td_snapshot` (optional `max_size` downscale), `td_visual_diff`, `td_perf` (heaviest ops by cook time + `budget_eaters`); every bridge response carries a `cook_pressure_warning` when sustained roundtrip latency says the graph is starving the bridge (`TD_MCP_COOK_PRESSURE_MS`, default 750)
 - **KB** — `kb_list_operators`, `kb_get_operator` (param schemas: internal name, label, style, menu tokens), `kb_refresh_operators_catalog`, `kb_pop_pattern`, `kb_promote_pop_pattern`, `kb_glsl_template`, `kb_get_cinematic_recipe`, `kb_get_vj_loop_reference`
-- **Search & corpus** — `kb_search` (filters: source/family/is_glsl), `kb_get_tutorial` (EVERY chunk of one video, ordered — transcript + vision), `kb_reindex`, `kb_index_update` (incremental upsert with orphan purge), `kb_vector_status`, `kb_wiki_status`, `kb_youtube_status`, `kb_list_youtube_sources`
+- **Search & corpus** — `kb_search` (filters: source/family/is_glsl; optional `rerank=True` cross-encoder second stage — see below), `kb_get_tutorial` (EVERY chunk of one video, ordered — transcript + vision), `kb_reindex`, `kb_index_update` (incremental upsert with orphan purge), `kb_vector_status`, `kb_wiki_status`, `kb_youtube_status`, `kb_list_youtube_sources`
+
+**Reranking is built but off by default**, because it was measured rather than assumed. `rerank=True` (or `TD_MCP_RERANK=1`) adds a `bge-reranker-v2-m3` pass that rescores each (query, chunk) pair and keeps the best k. Across 10 coverage probes on this corpus it *cut* practical tutorial chunks in the top-3 from 10/30 to 7/30 and took search from 47 ms to 1694 ms: the cross-encoder favours encyclopedic wiki prose over conversational tutorial transcripts, so asking about "perform mode" promotes the reference page over the deployment tutorial that answers it. Real wins exist but are inconsistent; the latency is not. Left in as an opt-in tool with the numbers recorded in `td_mcp/kb/rerank.py`.
 
 ## Training the knowledge base
 
@@ -47,6 +49,10 @@ Then, from the agent:
 1. **Operators** — `kb_refresh_operators_catalog` introspects the *running* TD build, so the catalog matches your version (currently 683 ops from 2025.32820) instead of stale docs.
 2. **Wiki** — `kb_ingest_wiki` / `kb_ingest_wiki_full` crawl docs.derivative.ca politely and resumably.
 3. **Tutorials** — `kb_ingest_youtube_channel` (yt-dlp + whisper) over the 7 curated channels, then `kb_ingest_tutorial_vision`: scene-detected keyframes → vision model → structured technique extractions. Keyframes beat transcripts for the *look* — a tutorial says "add some noise", the frame says which noise, at what scale.
+
+   The vision pass is also what makes a tutorial *findable*. Spoken and written vocabulary diverge: a video about movie playback says "two very big images" and "preload", never "Hap" or "NotchLC", so its transcript chunks sit ~0.17 further away in embedding space than a vision-enriched one. The pass adds `Technique:` and `Operators:` lines carrying the written vocabulary a query actually uses. It only helps screencasts, though — on talking-head footage the model correctly reports `nothing_technical` and contributes a summary but no operators.
+
+   Both download paths share one yt-dlp player-client fallback chain (`run_ytdlp_download`), because YouTube's anti-bot posture shifts every few months and any single pinned client eventually returns metadata it then 403s on. Failures surface yt-dlp's own stderr rather than a bare exit code.
 4. **Shaders** — `kb_ingest_geeks3d_shaders`, `kb_ingest_shadertoy_shaders`; `kb_ingest_vj_corpus` classifies reference loops with CLIP + Haiku.
 5. **Index** — `kb_reindex` once, `kb_index_update` after every ingestion (incremental upsert, purges orphans). Default embedding: `BAAI/bge-m3` (~2GB, multilingual); index lives in `~/.cache/td-mcp/lancedb/`.
 
@@ -75,13 +81,18 @@ Things the bridge cannot fix — worth knowing before debugging the wrong layer:
 | `TD_MCP_TOKEN_FILE` | Bridge token file (default `~/.cache/td-mcp/bridge_token`) |
 | `TD_MCP_EMBEDDING_MODEL` / `TD_MCP_VECTOR_DB` | Embedding model override / LanceDB index location |
 | `TD_MCP_WHISPER_MODEL` | Whisper model (`tiny`…`large-v3`, default `base`) |
-| `TD_MCP_YTDLP_COOKIES_BROWSER` | Browser to read YouTube cookies from (SABR workaround) |
-| `TD_MCP_SHADERTOY_API_KEY` / `ANTHROPIC_API_KEY` | Shader ingestion / vision + VJ classification |
+| `TD_MCP_YTDLP_PLAYER_CLIENTS` | yt-dlp player-client fallback chain (default `web_embedded,mweb,android,` — trailing empty = yt-dlp's own rotation) |
+| `TD_MCP_YTDLP_COOKIES_BROWSER` | Browser to read YouTube cookies from. **Leave unset** — tried last, and a rotated cookie jar makes YouTube serve images-only |
+| `TD_MCP_YTDLP_FORMAT_SORT` | `-S` sort passed to yt-dlp (default none) |
+| `TD_MCP_RERANK` / `TD_MCP_RERANK_MODEL` | Enable reranking globally (default off) / cross-encoder override |
+| `TD_MCP_RERANK_FETCH_K` / `TD_MCP_RERANK_MAX_TOKENS` | Candidates pulled before reranking (50) / truncation window (512) |
+| `TD_MCP_VISION_MODEL` | Vision-pass model (default `claude-sonnet-5`) |
+| `TD_MCP_SHADERTOY_API_KEY` / `ANTHROPIC_API_KEY` | Shader ingestion / vision + VJ classification. `ANTHROPIC_BASE_URL` routes the vision pass through an OpenAI-compatible gateway (OpenRouter etc.) — set `TD_MCP_VISION_MODEL` to that gateway's model id |
 
 ## Development
 
 ```bash
-pytest -q        # 213 passed, 1 skipped — no TD or network needed
+pytest -q        # 231 passed, 1 skipped — no TD or network needed
 ruff check .     # TD builtins ignored for the DAT script
 ```
 
