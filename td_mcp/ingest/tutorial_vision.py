@@ -39,7 +39,13 @@ from typing import Literal
 
 from pydantic import BaseModel, ValidationError
 
-from td_mcp.ingest.youtube import DEFAULT_CACHE_DIR, VideoMeta, _video_dir
+from td_mcp.ingest.youtube import (
+    DEFAULT_CACHE_DIR,
+    VideoMeta,
+    _attribution,
+    _video_dir,
+    run_ytdlp_download,
+)
 from td_mcp.kb.vector import Chunk
 from td_mcp.util import write_json_atomic
 
@@ -153,24 +159,19 @@ def download_video(
     if video_path.exists():
         return video_path
 
-    # web_safari client + HLS preference: YouTube 403s DASH data for
-    # anonymous/web clients (SABR gating, observed 2026-07), but the HLS
-    # manifests still stream fine with browser cookies.
-    cmd = ["yt-dlp", "--quiet"]
-    if YTDLP_COOKIES_BROWSER:
-        cmd += ["--cookies-from-browser", YTDLP_COOKIES_BROWSER]
-    cmd += [
-        "--extractor-args", "youtube:player_client=web_safari",
-        "-f",
-        f"bestvideo[height<={max_height}]/best[height<={max_height}]/best",
-        "-S", "proto:m3u8",
-        "-o",
-        str(video_path),
-        meta.url,
-    ]
+    # Shares the audio path's player-client fallback chain — the two used to
+    # carry separate copies of the same hardcoded workaround, which then
+    # expired in both places at once.
     try:
-        subprocess.check_call(cmd, stderr=subprocess.DEVNULL, timeout=1800)
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError) as e:
+        run_ytdlp_download(
+            meta.url,
+            str(video_path),
+            f"bestvideo[height<={max_height}]/best[height<={max_height}]/best",
+        )
+    except (RuntimeError, subprocess.TimeoutExpired, FileNotFoundError) as e:
+        # One dead video must not abort a batch — but log yt-dlp's own
+        # reason, not a bare exception repr, or a whole failed run reads as
+        # "nothing happened".
         logger.warning("video download failed for %s: %s", meta.url, e)
         return None
     return video_path if video_path.exists() else None
@@ -567,7 +568,7 @@ def build_chunks_from_techniques(
             f"{c['source']} → {c['target']}" for c in ext.get("connections", [])
         )
         body = [
-            f"{timestamp} (from {meta.channel} — {meta.title})",
+            f"{timestamp} (from {_attribution(meta, channel_handle)} — {meta.title})",
             f"Technique: {ext.get('technique', '')}",
             ext.get("summary", ""),
         ]
