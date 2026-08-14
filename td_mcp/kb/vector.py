@@ -21,6 +21,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from td_mcp.kb.rerank import DEFAULT_FETCH_K, get_reranker, reranking_enabled
+
 DEFAULT_MODEL = os.environ.get("TD_MCP_EMBEDDING_MODEL", "BAAI/bge-m3")
 DEFAULT_DB_PATH = Path(
     os.environ.get(
@@ -258,9 +260,21 @@ class VectorKB:
         source: str | None = None,
         family: str | None = None,
         is_glsl: bool | None = None,
+        rerank: bool | None = None,
+        fetch_k: int | None = None,
     ) -> list[dict]:
+        """Vector search, optionally reranked by a cross-encoder.
+
+        With reranking on, the index is asked for `fetch_k` candidates and
+        the cross-encoder picks the best `k` of them — the point being that
+        a chunk the bi-encoder buried at rank 40 can still be the right
+        answer. Filters are applied before the fetch so the cross-encoder
+        never burns an inference on a candidate that would be discarded.
+        """
         if not self.has_index():
             return []
+        use_rerank = reranking_enabled() if rerank is None else rerank
+        pool = max(k, fetch_k or DEFAULT_FETCH_K) if use_rerank else k
         qvec = self._embed([query])[0]
         table = self._get_db().open_table(TABLE_NAME)
         q = table.search(qvec)
@@ -276,11 +290,13 @@ class VectorKB:
         if where_clauses:
             q = q.where(" AND ".join(where_clauses))
 
-        results = q.limit(k).to_list()
+        results = q.limit(pool).to_list()
         # Strip the heavy vector field from the response — never useful to
         # the caller, and 1024 floats per result blows up token budget.
         for r in results:
             r.pop("vector", None)
+        if use_rerank:
+            return get_reranker().rerank(query, results, k)
         return results
 
     def get_video_chunks(self, video_id: str) -> dict:
