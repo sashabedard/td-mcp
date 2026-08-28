@@ -55,7 +55,7 @@ Without it, `kb_search` fails on a missing `sentence_transformers`. Everything e
 ## What you can ask for
 
 - **Build a POP system from a prompt** — 8 vetted chains (particle feedback sim, `rayPOP` collisions, noise-displaced grids and spheres, point-cloud starter, CHOP→POP and TOP→POP bridges). The agent starts from a network that cooks.
-- **Reproduce a look** — build → snapshot → measure the difference against your reference (luminance/contrast/RGB deltas + CLIP similarity) → adjust. The loop ends when the image agrees, not when the explanation sounds good.
+- **Reproduce a look** — build → snapshot → measure the difference against your reference (luminance/contrast/RGB deltas always; CLIP similarity if you add `.[vj]`) → adjust. The loop ends when the image agrees, not when the explanation sounds good.
 - **Cinematic post chains** — 10 recipes with operator chain, param values and pitfalls: shallow DOF, rack focus, lumablur bloom, anamorphic flare, filmic grade, god rays, motion blur, chromatic aberration, film grain.
 - **Audio-reactive VJ loops** — 22 patterns tagged by BPM range, energy, palette and key operators.
 - **GLSL TOPs** — 4 vetted templates (procedural, 1-input, 2-input, compute) with the uniform reference and TD-specific antipatterns.
