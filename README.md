@@ -69,6 +69,17 @@ They matter most for **POPs** — released in TD 2025, effectively absent from e
 
 Each skill is a plain Markdown file in `skills/`. Readable, editable, diffable if you want to change how the agent behaves.
 
+## Why the KB is built this way
+
+Six decisions, each one a thing that went wrong first:
+
+- **Two knowledge bases, not one.** Typed JSON for facts that must be exact — operator classes, param internal names, vetted chains — and a vector index for prose. A near-miss chunk is a fine answer to "how do I get bloom" and a bug when it hands you `translate` instead of `translatex`. Retrieval where approximation is useful, lookup where it isn't.
+- **The operator catalog is introspected from your running TD, not scraped from docs.** `kb_refresh_operators_catalog` reads the live build: 683 operators (CHOP 184 · TOP 148 · SOP 115 · POP 101 · DAT 75 · COMP 42 · MAT 18), each param carrying internal name, label, style and menu tokens. Docs lag releases. Your build doesn't.
+- **Every pattern records the build it cooked on** (`verified_on_build`). A chain verified against 2025.32820 is evidence; an unstamped chain is a suggestion. Staleness becomes visible instead of silent.
+- **Chunks follow prose, not a fixed width.** Wiki text splits on paragraph boundaries (~700 words), transcripts group whisper segments (~400 words) and keep their timestamps, and the title is prefixed into the embedded text so short queries still land. Fixed-size windows cut mid-explanation — exactly where a TD tutorial puts the answer.
+- **Keyframes are ingested alongside transcripts, because spoken TD isn't written TD.** A video about movie playback says "two very big images", never "Hap" or "NotchLC" — its transcript sits ~0.17 further away in embedding space than a vision-enriched version of the same video. The vision pass adds back the written vocabulary your query actually uses.
+- **It runs local and grows from what worked.** The index is a LanceDB file under `~/.cache/td-mcp/`, no daemon to start; the corpus is 7 curated channels rather than all of YouTube, and `kb_promote_pop_pattern` writes validated builds back into the typed KB. Today's working network is tomorrow's starting point.
+
 ---
 
 <details>
