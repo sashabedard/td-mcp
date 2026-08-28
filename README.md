@@ -71,9 +71,30 @@ Each skill is a plain Markdown file in `skills/`. Readable, editable, diffable i
 
 ## Why the KB is built this way
 
-Six decisions, each one a thing that went wrong first:
+```mermaid
+flowchart LR
+    A["Agent"]
 
-- **Two knowledge bases, not one.** Typed JSON for facts that must be exact — operator classes, param internal names, vetted chains — and a vector index for prose. A near-miss chunk is a fine answer to "how do I get bloom" and a bug when it hands you `translate` instead of `translatex`. Retrieval where approximation is useful, lookup where it isn't.
+    subgraph exact ["exact lookup — a near-miss is a bug"]
+        T["Typed KB<br>dict lookup by id<br>no embeddings"]
+        TD["683 operators + param schemas<br>8 POP chains · 4 GLSL templates<br>10 recipes · 22 VJ patterns"]
+        T --> TD
+    end
+
+    subgraph fuzzy ["retrieval — a near-miss is useful"]
+        V["Vector KB<br>LanceDB ANN · BGE-M3 1024-dim<br>SQL filters applied before fetch"]
+        VD["wiki · tutorial transcripts<br>keyframe extractions · shaders"]
+        RR["cross-encoder rerank<br>off by default"]
+        V --> VD
+        V -.->|"rerank=True"| RR
+    end
+
+    A -->|"kb_get_operator<br>kb_pop_pattern<br>kb_glsl_template"| T
+    A -->|"kb_search"| V
+```
+
+Ask for `translatex` and get `translate` back at 0.94 similarity: that is a wrong answer wearing a right answer's clothes. Exact facts get exact lookup; prose gets retrieval. Five more decisions follow from that, each one a thing that went wrong first:
+
 - **The operator catalog is introspected from your running TD, not scraped from docs.** `kb_refresh_operators_catalog` reads the live build: 683 operators (CHOP 184 · TOP 148 · SOP 115 · POP 101 · DAT 75 · COMP 42 · MAT 18), each param carrying internal name, label, style and menu tokens. Docs lag releases. Your build doesn't.
 - **Every pattern records the build it cooked on** (`verified_on_build`). A chain verified against 2025.32820 is evidence; an unstamped chain is a suggestion. Staleness becomes visible instead of silent.
 - **Chunks follow prose, not a fixed width.** Wiki text splits on paragraph boundaries (~700 words), transcripts group whisper segments (~400 words) and keep their timestamps, and the title is prefixed into the embedded text so short queries still land. Fixed-size windows cut mid-explanation — exactly where a TD tutorial puts the answer.
