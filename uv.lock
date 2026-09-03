@@ -2610,6 +2610,7 @@ dependencies = [
     { name = "mcp" },
     { name = "pillow" },
     { name = "pydantic" },
+    { name = "python-dotenv" },
     { name = "websockets" },
 ]
 
@@ -2652,7 +2653,7 @@ requires-dist = [
     { name = "httpx", marker = "extra == 'ingest'", specifier = ">=0.27" },
     { name = "lancedb", marker = "extra == 'dev'", specifier = ">=0.24" },
     { name = "lancedb", marker = "extra == 'kb'", specifier = ">=0.24" },
-    { name = "mcp", specifier = ">=1.2.0" },
+    { name = "mcp", specifier = ">=1.2.0,<2" },
     { name = "open-clip-torch", marker = "extra == 'vj'", specifier = ">=2.24" },
     { name = "openai-whisper", marker = "extra == 'ingest'", specifier = ">=20240930" },
     { name = "pillow", specifier = ">=10.0" },
@@ -2663,6 +2664,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.7" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24" },
+    { name = "python-dotenv", specifier = ">=1.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
     { name = "sentence-transformers", marker = "extra == 'kb'", specifier = ">=3.0" },
     { name = "torch", marker = "extra == 'vj'", specifier = ">=2.2" },

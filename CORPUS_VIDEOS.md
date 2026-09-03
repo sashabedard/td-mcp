@@ -1,8 +1,8 @@
 # Corpus vidéo td-mcp — 186 vidéos, 1927 min (32.1h)
-Transcrites: 186 · Passe vision: 177
+Transcrites: 186 · Passe vision: 178
 
 ## B2BK (1 vidéos)
-- [ 16.5m] 📝 transcript seul Touchdesigner Tutorial - QuadReprojection (Anamorphosis)
+- [ 16.5m] 👁 13 seg         Touchdesigner Tutorial - QuadReprojection (Anamorphosis)
 
 ## Derivative (5 vidéos)
 - [ 13.1m] 👁 10 seg         How Real-Time Tools Changed My Life - Sebastien Mercier
