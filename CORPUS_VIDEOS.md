@@ -1,0 +1,204 @@
+# Corpus vidéo td-mcp — 186 vidéos, 1927 min (32.1h)
+Transcrites: 186 · Passe vision: 177
+
+## B2BK (1 vidéos)
+- [ 16.5m] 📝 transcript seul Touchdesigner Tutorial - QuadReprojection (Anamorphosis)
+
+## Derivative (5 vidéos)
+- [ 13.1m] 👁 10 seg         How Real-Time Tools Changed My Life - Sebastien Mercier
+- [ 22.1m] 👁 17 seg         TouchDesigner : Interactive Installations with POPs - Fabien Bouchard aka 'Parse/Error'
+- [ 17.3m] 👁 15 seg         Designing Real-Time Tools and Assets for Live Production - Cecile LeBleu
+- [  8.2m] 👁 9 seg          On Simulations using POPs - Eisuke Kato (JP) -「日本語 / Japanese」
+- [ 22.0m] 👁 20 seg         TouchDesigner as a Creative Bridge in Commercial and Research Projects - Yan He & Yifan Zhuang (CN)
+
+## InteractiveImmersiveHQ (45 vidéos)
+- [  0.0m] 👁 8 seg          Simulating Displays with EDIDs (050)
+- [  0.0m] 👁 9 seg          Permanent Installation Autostart Scripts (057)
+- [  0.0m] 👁 8 seg          While Loop That Doesn't Crash TouchDesigner (014)
+- [ 23.3m] 👁 22 seg         MediaPipe Face Tracking in TouchDesigner
+- [  0.0m] 👁 8 seg          TouchDesigner User Interface Tricks (101)
+- [  0.0m] 👁 15 seg         Easy Optimization Tricks (060)
+- [  0.0m] 👁 13 seg         Best Practices for TouchDesigner Collaboration (005)
+- [  0.0m] 👁 12 seg         How to Prepare for a Permanent TouchDesigner Installation
+- [  0.0m] 👁 15 seg         LED Sculpture Content Creation Pipeline (169)
+- [ 20.2m] 👁 22 seg         Creating a Custom POP Lag Component in TouchDesigner
+- [  0.0m] 👁 4 seg          Connect TouchDesigner & Max 8 with OSC (072)
+- [  0.0m] 👁 17 seg         NDI Tools for Immersive Experiences (097)
+- [  0.0m] 👁 10 seg         Drag & Drop Scripts (045)
+- [  0.0m] 👁 16 seg         The Ultimate Movie Loading Guide (006)
+- [  0.0m] 👁 14 seg         An Introduction to Engine COMP (003)
+- [  0.0m] 👁 19 seg         Kinect 2 vs Kinect Azure (123)
+- [  0.0m] 👁 10 seg         Self-typing Text with Python (066)
+- [ 14.7m] 👁 10 seg         LiDAR Scan POPs in TouchDesigner
+- [  0.0m] 👁 22 seg         Running TouchDesigner in the cloud w/ Paperspace (029)
+- [  0.0m] 👁 22 seg         LED Mapping & GPU Pipelines w/ Lucas Morgan
+- [  0.0m] 👁 13 seg         Connect Node-RED and TouchDesigner (010)
+- [  0.0m] 👁 14 seg         Using Kinect + POPs in TouchDesigner
+- [  0.0m] 👁 25 seg         Optimizing your Project with Perform Mode (222)
+- [ 15.5m] 👁 10 seg         16 - Working with POPs - TouchDesigner Tutorial: Beginner Crash Course
+- [  0.0m] 👁 9 seg          Catching Errors in TouchDesigner (062)
+- [  0.0m] 👁 14 seg         Python Optimization and Pro Tips
+- [  0.0m] 👁 2 seg          5 Pieces of Gear I Always Have Onsite
+- [ 23.1m] 👁 24 seg         18 - Network Utilities and Annotations - TouchDesigner Tutorial: Beginner Crash Course
+- [  0.0m] 👁 26 seg         TouchDesigner Python Environment Manager Basics
+- [  0.0m] 👁 28 seg         Custom User Interfaces inside TouchDesigner
+- [  0.0m] 👁 9 seg          Pro Python String Hacks (024)
+- [  0.0m] 👁 15 seg         Benefits of Web Frontends for TD Developers (007)
+- [  0.0m] 👁 24 seg         Choosing the Right Projector for Projection Mapping
+- [  0.0m] 👁 18 seg         Enhanced Web Workflows with three.js (032)
+- [  0.0m] 👁 5 seg          Sprinkle SOP & JSON DAT (016)
+- [  0.0m] 👁 9 seg          Projection Mapping Tools (046)
+- [  0.0m] 👁 8 seg          The Best Communication Protocols in TouchDesigner (044)
+- [ 22.3m] 👁 24 seg         Exploring Simplified Gemini Tools in TouchDesigner
+- [  0.0m] 👁 12 seg         Projection Mapping Content with UVs (019)
+- [  0.0m] 👁 17 seg         Op Find DAT Tips and Tricks (038)
+- [ 30.2m] 👁 26 seg         Houdini to TouchDesigner Pipeline
+- [  0.0m] 👁 10 seg         Orbbec vs Kinect (188)
+- [ 34.2m] 👁 31 seg         Using Audio Visualizers in a TouchDesigner UI
+- [  0.0m] 👁 8 seg          Have you used Perform DAT? (040)
+- [  0.0m] 👁 17 seg         Nvidia Body Track CHOP (148)
+
+## MatthewRagan (5 vidéos)
+- [ 14.2m] 👁 7 seg          TouchDesigner | Inspired by VVVV's Boy Grouping
+- [ 10.4m] 👁 7 seg          TouchDesigner | GitHub & External Toxes | 3/3
+- [  8.2m] 👁 7 seg          TouchDesigner | GitHub & External Toxes | 2/3
+- [  8.1m] 👁 3 seg          TouchDesigner | The Stoner | Practical example - Setup | 3/6
+- [  6.1m] 👁 5 seg          TouchDesigner | GitHub & External Toxes | 1/3
+
+## OkamirufuV (119 vidéos)
+- [ 12.9m] 👁 13 seg         How to Create a Generative Particle Network: TouchDesigner Tutorial (Easy)
+- [  8.9m] 👁 7 seg          TouchDesigner Tutorial: Create an Animated Stars Orb with POPs (Easy)
+- [ 10.9m] 👁 10 seg         TouchDesigner POPs Tutorial: Biomechanical Worm with Noise, Pattern, Extrude & Parametric Scale
+- [  5.9m] 👁 6 seg          TouchDesigner Tutorial: Glossy 3D Abstract Geometry (Easy)
+- [ 12.3m] 👁 11 seg         TouchDesigner Tutorial: Generative Black Undulating Ribbon with RayTK for Poster Design
+- [ 10.8m] 👁 11 seg         TouchDesigner Tutorial: Build a Procedural Point Scatter Text System (Easy)
+- [ 27.3m] 👁 24 seg         TouchDesigner Tutorial: Blob Tracking + Time Warping * Dance Performance and Interactive Experiences
+- [ 26.4m] 👁 26 seg         What is Generative Art: TouchDesigner’s Role in Art, Algorithms, and Creative Systems Explained
+- [  9.5m] 👁 8 seg          TouchDesigner Tutorial: Massive 250k Dust Particle Simulation (Easy)
+- [ 24.7m] 👁 25 seg         Interactive Networks in TouchDesigner For  Playtron or  MIDI – The Basics and Core Logic Part 4 of 9
+- [ 10.9m] 👁 10 seg         TouchDesigner Tutorial: Create a 3D Pixelated Video Grid with TimeMachine & POPs (Easy)
+- [  7.7m] 👁 8 seg          Metallic Ribs in Touchdesigner - Using Feedback Blur and Displace TOP [Super Fast Tutorial Series ]
+- [  8.8m] 👁 7 seg          TouchDesigner Tutorial: Iridescent Melting Drop Texture Futuristic Pastel Neon Color with Glitch VFX
+- [ 11.1m] 👁 11 seg         TouchDesigner Tutorial: Create an Infinite 3D Point Vortex with POPs (Easy)
+- [  9.8m] 👁 11 seg         TouchDesigner Tutorial: Procedural Metaball Typography & Proximity POP Mesh (Easy)
+- [ 10.3m] 👁 7 seg          TouchDesigner Tutorial: Fluid Point Surface with Particles (Easy)
+- [  2.6m] 👁 3 seg          TouchDesigner Plugin: Background Generator For Live Visuals & Interactive Installations PL V2.0
+- [  8.8m] 👁 8 seg          TouchDesigner Tutorial: Procedural Organic Tentacles & Instancing (Easy)
+- [  9.5m] 👁 10 seg         TouchDesigner Tutorial: 3D Text Extrusion & Particle Systems (Easy)
+- [ 13.0m] 👁 13 seg         TouchDesigner Tutorial: Organic Morphing Bubbles with POPs & Skinning (Easy)
+- [  9.8m] 👁 7 seg          TouchDesigner Tutorial: Procedural Spiderweb Geometry (Easy)
+- [ 18.4m] 👁 18 seg         TouchDesigner POPs Tutorial: Create Image Instances from any Geometry
+- [ 11.8m] 👁 13 seg         TouchDesigner POPs: Recreating the Audio Spectrum 3D Shape From Nono Using POPs
+- [  7.8m] 👁 8 seg          Organic Amoeba - TouchDesigner POPs Tutorial
+- [ 43.2m] 👁 43 seg         Audio Reactive Visuals With TouchDesigner: Displacement Noise Instances u/ Particles & UV Map Basics
+- [ 18.3m] 📝 transcript seul Audio Reactive 2 - TouchDesigner | Redefine 3D Surfaces Using RayTK Wave Fields with Spiral Patterns
+- [ 16.7m] 👁 15 seg         TouchDesigner Tutorial: Create a Procedural Layered Grid with POPs (Easy)
+- [  9.3m] 👁 10 seg         TouchDesigner Tutorial: Glass Dispersion & Prism Cubes (Easy)
+- [ 19.9m] 👁 20 seg         TouchDesigner Tutorial: Hand-Tracked Interactive Orbit Gallery (Easy)
+- [ 13.5m] 👁 13 seg         TouchDesigner Tutorial: Build an Interactive 3D Parametric Text Display (Easy)
+- [  7.7m] 👁 9 seg          The Glypher - A New TouchDesigner Plugin - Color-Driven Character Mapping Plugin
+- [  5.9m] 👁 4 seg          Carbon Fiber in TouchDesigner - Convolve Feedback and displace TOP [Super Fast Tutorial Series]
+- [  8.9m] 👁 8 seg          TouchDesigner Tutorial: Create a Synthetic Structure using TOP to POP (Easy)
+- [ 13.8m] 👁 11 seg         TouchDesigner Tutorial: MediaPipe Hand Tracking & Procedural Instancing (Easy)
+- [ 11.2m] 👁 9 seg          Blob Tracking in Your Browser — No Install, No Limits, Real-Time MIDI & Video
+- [ 18.4m] 👁 14 seg         TouchDesigner Tutorial: Blob Tracking to Instances & Understanding UV vs Absolute Coordinates
+- [ 12.3m] 👁 9 seg          TouchDesigner Tutorial: Animate Geometry Over Meshes with Pop X (Easy)
+- [  8.2m] 👁 8 seg          TouchDesigner Tutorial: Create Stylized Cubic Layers using Limit POPs (Easy)
+- [  9.5m] 👁 10 seg         TouchDesigner Tutorial: Ryoji Ikeda Style Kinetic Motion Tiles (Easy)
+- [  8.9m] 👁 10 seg         TouchDesigner POPs Tutorial: Create a Parametric Metallic Spine Using Just Revolve and Copy
+- [ 10.9m] 👁 11 seg         TouchDesigner Tutorial: Procedural Parallax Layering System (Easy)
+- [  6.5m] 👁 7 seg          Vector Fields Made Simple - TouchDesigner POPs Tutorial (Noise + Patterns)
+- [  9.2m] 👁 10 seg         TouchDesigner Tutorial: Reactive Hand Tracking & Digital UI Scope (Easy)
+- [ 13.9m] 👁 13 seg         TouchDesigner Tutorial: Create Organic Cellular Visuals with POPX (Easy)
+- [ 16.3m] 👁 17 seg         TouchDesigner Tutorial: Create Alien Planet Sand Dune Textures - SOP Instancing & Learn Coordinates
+- [ 13.5m] 👁 13 seg         TouchDesigner Tutorial: Generative Glowing Tree and Fireflies Particle System (Easy)
+- [  9.7m] 👁 10 seg         TouchDesigner Tutorial: Voxel Digit Animation with Data Packing (Easy)
+- [  8.6m] 👁 5 seg          TouchDesigner Tutorial: Generative Particles and Field POPs (Easy)
+- [ 21.8m] 👁 10 seg         TouchDesigner Tutorial: Create a Custom Component for Visual Interactive & Multimedia Installations
+- [  7.9m] 👁 9 seg          TouchDesigner Tutorial: Create a 3D Voxel Matrix from 2D Pixels using POPs (Easy)
+- [  0.5m] 📝 transcript seul Conceptual Vj Loops Holographic Roses + 15 Versatile 4k Videos For Audio Visual Installation
+- [  8.0m] 👁 7 seg          TouchDesigner Tutorial: Build an Organic Fur System with POPs (Easy)
+- [ 10.1m] 👁 9 seg          TouchDesigner Tutorial: Planar Instancing & Replicator Labels for Interactive Visuals (Easy)
+- [ 10.0m] 👁 9 seg          TouchDesigner Tutorial: Create Organic Pixel Type using the POPs Operator Family (Easy)
+- [ 16.5m] 👁 11 seg         TouchDesigner Tutorial: Create FX Overlays using Finger Pinch Gestures (Easy)
+- [ 10.6m] 👁 11 seg         TouchDesigner POPs Tutorial: Create an Audio Reactive Cone Using Revolve Operator
+- [  8.6m] 👁 7 seg          Generative Cymatics with GLSL and Particles: TouchDesigner Tutorial (Medium)
+- [ 12.2m] 👁 11 seg         TouchDesigner Tutorial: Create a Generative DNA Strand Animation using POPs (Easy)
+- [  5.9m] 👁 6 seg          TouchDesigner POPs Tutorial: Create a 3D Spirograph Mandala Shapes Using Noise and Revolve
+- [  6.0m] 👁 6 seg          What is TouchDesigner: A Simple Explanation for Visual, Interactive and Multimedia Creators
+- [ 10.3m] 👁 10 seg         TouchDesigner Tutorial: Neon Matrix Text Cascade Digital Rain Using Particle POPs (Easy)
+- [  8.9m] 👁 8 seg          Touchdesigner Tutorial: Metallic Glass Y2K Aesthetic Using: Feedback, Blur and Displace Basics
+- [  6.0m] 👁 7 seg          TouchDesigner Tutorial: Create a Liquid Noise Surface with POPs (Easy)
+- [ 12.4m] 👁 7 seg          TouchDesigner Tutorial: Procedural Text Instancing & Dynamic Geometry Layout (Easy)
+- [  7.3m] 👁 6 seg          TouchDesigner Tutorial: Curl Noise & Particle Feedback Loops (Easy)
+- [  6.6m] 👁 6 seg          TouchDesigner Tutorial: Build Organic Particle Spirals with POPs (Easy)
+- [  4.0m] 👁 4 seg          TouchDesigner:  Mirror Effect Like Photoshop with Real Time Animation and Interactivity - Plugin
+- [ 10.4m] 👁 11 seg         TouchDesigner POPs Tutorial: Transform Any Video To Particles - Webcam, Live, Streaming
+- [ 15.6m] 👁 12 seg         What Is Feedback? Overview and Using Feedback TOP in TouchDesigner for Visual & Interactive Creators
+- [  9.0m] 👁 7 seg          TouchDesigner Tutorial: Iridescent Opalescence with Glassy Texture & Chrome Effect TOP x SOP
+- [ 15.8m] 👁 16 seg         TouchDesigner Tutorial: Build an Isometric Scene with DATs & POPs (Easy)
+- [  8.2m] 👁 6 seg          TouchDesigner POPs: Recreating the Jellyfish without Math, Using Revolve and Chop Patterns
+- [  9.2m] 👁 10 seg         Spectral Point Cloud CTR Effect & Color Aberration RGB Cache - TouchDesigner POPs
+- [ 21.8m] 👁 22 seg         TouchDesigner Tutorial: Real-Time Hand Tracking HUD (Easy)
+- [  8.0m] 👁 7 seg          TouchDesigner POPs: Metallic Spikes with Lookup, Math Mix & Chop Pattern – Parametric 3D Modeling
+- [  8.1m] 👁 7 seg          TouchDesigner Tutorial: Noise Driven Geometry Clones & PBR Materials (Easy)
+- [  8.6m] 👁 8 seg          Galactic Rock Formation Using TouchDesigner POPs - Point Generator & Noise Pop
+- [ 23.9m] 👁 22 seg         Audio Reactive Visuals With TouchDesigner: A Beginner Tutorial for Visual & Music Creators
+- [ 10.4m] 👁 9 seg          TouchDesigner Tutorial: Point Transitions & Math Mix POP (Easy)
+- [ 16.4m] 👁 11 seg         TouchDesigner Tutorial: Crystal Ribs for Y2K-inspired Poster Design and Animation
+- [  8.8m] 👁 8 seg          TouchDesigner Tutorial: Create an Interactive Points Wrap Effect (Easy)
+- [  7.0m] 👁 6 seg          TouchDesigner Tutorial: Build Procedural Geometry Arrays with CHOP Logic (Easy)
+- [  8.3m] 📝 transcript seul TouchDesigner Suite  Camera Position | Liquids | GLSL Clone & Tiles | Color Picker & Color Palette
+- [  9.9m] 👁 9 seg          TouchDesigner POPs: Organic Rhizome Simulations Using Noise Modulation Techniques with Math Mix
+- [ 16.3m] 👁 10 seg         TouchDesigner Tutorial: Create Procedural Growing Vines (Easy)
+- [ 40.3m] 👁 37 seg         Audio Reactive in TouchDesigner SOP Instancing Cloner to Create Wave Patterns with Glitchcore Colors
+- [  8.6m] 👁 8 seg          TouchDesigner Tutorial: Video to ParticlesGPU - Turn Any Video into Organic Particles
+- [  7.3m] 👁 7 seg          Particle Cube Scanner - TouchDesigner POPs Tutorial (Limit + Noise)
+- [ 12.0m] 👁 12 seg         Button States in TouchDesigner: Momentary, Toggle & Radio Modes with Playtron - Part 2 of 9
+- [  2.1m] 📝 transcript seul Install Python Libraries in TouchDesigner  |  Successful Python Installation in Less Than 2 Minutes
+- [  5.8m] 👁 5 seg          Make a Metallic Snake - TouchDesigner POPs Tutorial (Noise + Patterns)
+- [ 10.0m] 👁 11 seg         TouchDesigner Tutorial: Mosaic Mask Effect with Time Machine TOP (Easy Level)
+- [  3.9m] 👁 4 seg          Metallic Chaos in Touchdesigner - Using Feedback Blur and Displace TOP [Super Fast Tutorial Series ]
+- [ 29.4m] 👁 27 seg         What Is Noise and how to use TouchDesigner to Create 2D Texture and 3D Parametric Displacements
+- [ 12.2m] 👁 13 seg         TouchDesigner POPs Tutorial: Sweep Text using Particles
+- [  7.1m] 👁 8 seg          TouchDesigner Tutorial: Build a Procedural Radial Slice System with me.digits (Easy)
+- [  8.9m] 👁 9 seg          TouchDesigner Tutorial: Fluid Text Morphing & Organic Liquid Transitions (Easy)
+- [  9.6m] 👁 8 seg          TouchDesigner Tutorial: Procedural Living Grass System (Easy)
+- [ 16.5m] 👁 13 seg         TouchDesigner Tutorial: Symmetrical Mandala Pattern inspired by Sacred Geometry Using SOP Instancing
+- [  6.9m] 👁 7 seg          TouchDesigner POPs: Create a Synthetic Wire Garden Pipes Using Skin, Copy And Chop Pattern
+- [ 11.8m] 👁 8 seg          TouchDesigner Tutorial: Create 3D Point Clouds and Geometry Cloning (Easy)
+- [ 10.7m] 👁 10 seg         TouchDesigner Tutorial: Create an Animated Spike Field with PopX (Easy)
+- [ 12.1m] 👁 13 seg         TouchDesigner POPs: Remake the Noise Sphere Using Noise and Lookup Texture
+- [  6.4m] 👁 7 seg          Moon Surface Noise Using TouchDesigner POPs
+- [ 29.3m] 👁 26 seg         AI Images to 3D Point Clouds + Interaction in TouchDesigner w/ Playtron MIDI - Part 3 of 9
+- [  8.4m] 👁 8 seg          TouchDesigner Tutorial: Create Titanium Cortex Metallic Scales Using POPs & Revolve (Easy)
+- [ 11.6m] 👁 11 seg         TouchDesigner Tutorial: Build 3D Topographic Trace Maps & Custom UI Layouts (Easy)
+- [ 19.9m] 👁 20 seg         Displace Everything in TouchDesigner using SOP Instances and Noise TOP as Z-axis Displacer
+- [ 15.8m] 👁 14 seg         TouchDesigner POPs Tutorial: Create a Synthetic Biology Centipede with Delete & Math Mix
+- [  9.9m] 👁 9 seg          TouchDesigner Tutorial: Create a Topographic Point Map using POPs (Easy)
+- [ 11.2m] 👁 10 seg         TouchDesigner Tutorial: Geometry Blending Using TOP Textures (Easy)
+- [ 13.5m] 👁 9 seg          Create Interactive Multisensory Experiences with TouchDesigner & Playtron MIDI – Part 1 of 9
+- [  8.8m] 👁 1 seg          Convert Texture Pixels into 3D Point Geometry: TouchDesigner Tutorial (Easy)
+- [ 14.2m] 👁 10 seg         TouchDesigner Tutorial: Noise Grid Generator Using Replicator and Custom Base Component
+- [  8.4m] 👁 7 seg          TouchDesigner Tutorial: Build Organic Procedural Meshes using Field and Noise POPs (Easy)
+- [ 11.3m] 👁 10 seg         What Are POPs? The New TouchDesigner Operator Family That Changes Everything
+- [  9.2m] 👁 9 seg          TouchDesigner POPs: Organic Shapes With Trails & Noise x Math Mix & Chop Pattern Techniques
+- [  9.2m] 📝 transcript seul TouchDesigner Tutorial: Build 3D Glowing Neon Waves with POPs (Easy)
+- [  7.9m] 👁 8 seg          TouchDesigner Tutorial: Create a Generative Glyph Dither Effect (Easy)
+
+## elekktronaut (5 vidéos)
+- [ 28.6m] 👁 25 seg         Blob Tracking Effect with POPs - TouchDesigner Tutorial 76
+- [ 13.5m] 👁 13 seg         Trace POP - TouchDesigner Tutorial 79
+- [ 16.9m] 👁 16 seg         A More Accurate Beat Detection – TouchDesigner Tutorial 77
+- [ 41.6m] 📝 transcript seul Healing Long Covid
+- [ 24.6m] 👁 19 seg         Particle Collisions with Ray POP – TouchDesigner Tutorial 78
+
+## nvoidarttech (1 vidéos)
+- [  8.6m] 👁 9 seg          "Escape" Behind the Scenes - Elburz & nVoid Art-Tech Ltd.
+
+## paketa12 (5 vidéos)
+- [ 15.8m] 👁 10 seg         pixel arithmetic in TouchDesigner
+- [ 24.8m] 👁 15 seg         balloons collision in TouchDesigner
+- [  0.5m] 📝 transcript seul Ilya's tablo in TOPs with TouchDesigner
+- [  4.8m] 📝 transcript seul a lighthouse and two boats ...in TouchDesigner
+- [ 13.2m] 👁 5 seg          texture anything in Touchdesigner

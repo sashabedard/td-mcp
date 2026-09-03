@@ -42,6 +42,12 @@
       "url": "https://www.youtube.com/channel/UCbgFCfj0vp-nNGQ4hT5uEAg/videos",
       "tags": ["official", "TD-Event", "Berlin", "Hermanovic", "POP-talks"],
       "notes": "Official Derivative channel — TD Event Berlin talks (Hermanovic Introducing POPs, Jack DiLaura Intro to POPs, all keynotes). Tier-1 source per spec §6.2."
+    },
+    {
+      "handle": "B2BK",
+      "url": "https://www.youtube.com/channel/UC7psL9wpp24MksootHW9GmQ/videos",
+      "tags": ["projection-mapping", "anamorphosis", "QuadReprojection", "camera", "tutorial"],
+      "notes": "B2BK — added for the QuadReprojection / anamorphosis tutorial (UBK9JD3lEM4). Projection-mapping and camera-space reprojection; only that single video is cached, not the whole channel."
     }
   ],
   "playlists": [],
