@@ -33,7 +33,7 @@ DEFAULT_DB_PATH = Path(
 TABLE_NAME = "chunks"
 
 ChunkSource = Literal[
-    "operators", "glsl_template", "pop_pattern", "wiki", "tutorial", "forum",
+    "operators", "glsl_template", "pop_pattern", "top_pattern", "wiki", "tutorial", "forum",
     "shader_geeks3d", "shader_shadertoy"
 ]
 
@@ -384,6 +384,7 @@ def build_seed_chunks() -> list[Chunk]:
     from td_mcp.kb.glsl import get_glsl_kb
     from td_mcp.kb.operators import get_catalog
     from td_mcp.kb.pop_patterns import get_pop_kb
+    from td_mcp.kb.top_patterns import get_top_kb
 
     chunks: list[Chunk] = []
 
@@ -436,6 +437,26 @@ def build_seed_chunks() -> list[Chunk]:
                 ),
                 operators=op_types,
                 families=["POP"],
+            )
+        )
+
+    for pat in get_top_kb().patterns:
+        op_types = [o.op_type for o in pat.ops]
+        fams = sorted({t[-3:] for t in op_types if t[-3:] in ("TOP", "DAT", "CHOP", "SOP", "POP", "MAT")})
+        chunks.append(
+            Chunk(
+                id=f"toppattern_{pat.id}",
+                source="top_pattern",
+                title=pat.name,
+                text=(
+                    f"{pat.description}\n\n"
+                    f"Tags: {', '.join(pat.tags)}.\n"
+                    f"Ops: {', '.join(op_types)}.\n\n"
+                    f"Notes: {pat.notes}\n\n"
+                    f"Pitfalls: {' | '.join(pat.pitfalls)}"
+                ),
+                operators=op_types,
+                families=fams or ["TOP"],
             )
         )
 

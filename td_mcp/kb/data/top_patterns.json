@@ -1,0 +1,751 @@
+{
+  "patterns": [
+    {
+      "id": "poisson_jacobi_convolve",
+      "name": "Poisson / pressure projection with convolveTOP + Table DAT (no GLSL)",
+      "description": "Solve the pressure Poisson equation and make a velocity field divergence-free using only node operators. convolveTOP reads its kernel from a Table DAT, which makes an exact damped-Jacobi iteration a single operator.",
+      "tags": [
+        "solver",
+        "fluid",
+        "no-glsl",
+        "feedback",
+        "poisson",
+        "incompressible"
+      ],
+      "difficulty": "hard",
+      "ops": [
+        {
+          "name": "divergence",
+          "op_type": "slopeTOP",
+          "params": {
+            "red": "hred",
+            "green": "vgreen",
+            "blue": "zero",
+            "alpha": "zero",
+            "method": "curnext",
+            "zeropoint": 0,
+            "offset1": 4,
+            "offsetunit": "pixels",
+            "extend": "zero"
+          }
+        },
+        {
+          "name": "div_mix",
+          "op_type": "channelmixTOP",
+          "params": {
+            "red1": 1,
+            "red2": 1,
+            "green2": 0,
+            "blue3": 0,
+            "alpha4": 0
+          }
+        },
+        {
+          "name": "div_scaled",
+          "op_type": "mathTOP",
+          "params": {
+            "gain": -12.8
+          }
+        },
+        {
+          "name": "jacobi_kernel",
+          "op_type": "tableDAT",
+          "params": {
+            "_rows": [
+              [
+                "0",
+                "0.2",
+                "0"
+              ],
+              [
+                "0.2",
+                "0.2",
+                "0.2"
+              ],
+              [
+                "0",
+                "0.2",
+                "0"
+              ]
+            ]
+          }
+        },
+        {
+          "name": "p_init",
+          "op_type": "constantTOP",
+          "params": {
+            "colorr": 0,
+            "colorg": 0,
+            "colorb": 0,
+            "alpha": 0,
+            "format": "rgba32float"
+          }
+        },
+        {
+          "name": "p_fb",
+          "op_type": "feedbackTOP",
+          "params": {
+            "top": "p_state",
+            "format": "rgba32float"
+          }
+        },
+        {
+          "name": "p_conv1",
+          "op_type": "convolveTOP",
+          "params": {
+            "dat": "jacobi_kernel",
+            "normalize": false,
+            "applytoalpha": true,
+            "scale": 0.999
+          }
+        },
+        {
+          "name": "p_add1",
+          "op_type": "addTOP",
+          "params": {}
+        },
+        {
+          "name": "p_state",
+          "op_type": "nullTOP",
+          "params": {
+            "format": "rgba32float"
+          }
+        },
+        {
+          "name": "p_up",
+          "op_type": "mathTOP",
+          "params": {
+            "outputresolution": "custom",
+            "inputfiltertype": "linear"
+          }
+        },
+        {
+          "name": "grad_p",
+          "op_type": "slopeTOP",
+          "params": {
+            "red": "hred",
+            "green": "vred",
+            "blue": "zero",
+            "alpha": "zero",
+            "method": "prevcur",
+            "zeropoint": 0,
+            "offset1": 4,
+            "offsetunit": "pixels",
+            "extend": "zero"
+          }
+        },
+        {
+          "name": "project",
+          "op_type": "subtractTOP",
+          "params": {}
+        }
+      ],
+      "connections": [
+        {
+          "out": "divergence",
+          "into": "div_mix"
+        },
+        {
+          "out": "div_mix",
+          "into": "div_scaled"
+        },
+        {
+          "out": "p_init",
+          "into": "p_fb"
+        },
+        {
+          "out": "p_fb",
+          "into": "p_conv1"
+        },
+        {
+          "out": "p_conv1",
+          "into": "p_add1",
+          "in_index": 0
+        },
+        {
+          "out": "div_scaled",
+          "into": "p_add1",
+          "in_index": 1
+        },
+        {
+          "out": "p_add1",
+          "into": "p_state"
+        },
+        {
+          "out": "p_state",
+          "into": "p_up"
+        },
+        {
+          "out": "p_up",
+          "into": "grad_p"
+        },
+        {
+          "out": "grad_p",
+          "into": "project",
+          "in_index": 1
+        }
+      ],
+      "notes": "Wire the velocity field into divergence[0] and project[0]; project outputs v - grad(p). Chain p_conv/p_add 9 times (each pair is one Jacobi iteration) before p_state; 3 pairs per row keeps the div_scaled fan short. Math: with div measured by a forward difference and grad by a backward difference (MAC staggering), their composition is exactly the 5-point Laplacian. Fixed point of p = A_w p + gain*D gives zero divergence when gain = -w/(4*s^2), where s is the slopeTOP scale factor. The damped-Jacobi operator (1-w)I + wA IS the kernel: for w=0.8 that is [0,.2,0 / .2,.2,.2 / 0,.2,0].",
+      "pitfalls": [
+        "slopeTOP DIVIDES by the sample step: measured s = 0.5/offset. s=0.5 at step 1 gives gain -0.8; s=0.125 at step 4 gives gain -12.8. Getting this wrong makes the solver amplify divergence ~10x per frame.",
+        "UNDAMPED Jacobi (kernel [0,.25,0 / .25,0,.25 / 0,.25,0]) diverges: the averaging operator has eigenvalue -1 at the Nyquist/checkerboard mode. Velocity exploded to +-7 within a second. Always use the damped form.",
+        "Mixing central differences for div and grad decouples the grid and reintroduces the checkerboard mode. Use curnext for divergence and prevcur for gradient.",
+        "convolveTOP scale slightly below 1 (0.999) kills the nullspace drift of the pure-Neumann problem.",
+        "N Jacobi iterations propagate only N pixels. At 1024 that is 0.9% of the frame: solve on a 4-px stencil at quarter resolution and reinterpolate the pressure instead of adding iterations.",
+        "Jacobi converges O(N^2) on low frequencies \u2014 residual relative divergence plateaus around 0.25-0.3. A coarse-only solve is WORSE, the residual is high-frequency noise."
+      ],
+      "references": [
+        "Stam 1999, Stable Fluids",
+        "GPU Gems 38, Fast Fluid Dynamics Simulation"
+      ],
+      "verified_on_build": "2025.32820"
+    },
+    {
+      "id": "semilagrangian_advect_packed_rgba",
+      "name": "Semi-Lagrangian advection of a packed RGBA state with one displaceTOP",
+      "description": "Advect velocity, density and temperature simultaneously by packing them into one RGBA32F texture and displacing it by its own RG channels. One displaceTOP moves all four fields; one channelmixTOP applies every force term.",
+      "tags": [
+        "fluid",
+        "advection",
+        "feedback",
+        "no-glsl",
+        "semi-lagrangian"
+      ],
+      "difficulty": "medium",
+      "ops": [
+        {
+          "name": "sim_init",
+          "op_type": "constantTOP",
+          "params": {
+            "colorr": 0,
+            "colorg": 0,
+            "colorb": 0,
+            "alpha": 0,
+            "format": "rgba32float"
+          }
+        },
+        {
+          "name": "fb_state",
+          "op_type": "feedbackTOP",
+          "params": {
+            "top": "sim_state",
+            "format": "rgba32float"
+          }
+        },
+        {
+          "name": "advect",
+          "op_type": "displaceTOP",
+          "params": {
+            "resolutionsource": "source",
+            "horzsource": "red",
+            "vertsource": "green",
+            "zsource": "none",
+            "midpointx": 0,
+            "midpointy": 0,
+            "displaceweightx": -0.015,
+            "displaceweighty": -0.015,
+            "uvweight": 1,
+            "offsetweight": 0,
+            "aspectcorrect": false,
+            "extend": "zero",
+            "inputfiltertype": "linear"
+          }
+        },
+        {
+          "name": "advect2",
+          "op_type": "displaceTOP",
+          "params": {
+            "displaceweightx": -0.015,
+            "displaceweighty": -0.015,
+            "inputfiltertype": "linear",
+            "extend": "zero"
+          }
+        },
+        {
+          "name": "forces",
+          "op_type": "channelmixTOP",
+          "params": {
+            "red1": 0.9985,
+            "green2": 0.9985,
+            "green3": -0.006,
+            "green4": 0.03,
+            "blue3": 0.9955,
+            "alpha4": 0.997
+          }
+        },
+        {
+          "name": "sim_state",
+          "op_type": "nullTOP",
+          "params": {
+            "format": "rgba32float"
+          }
+        }
+      ],
+      "connections": [
+        {
+          "out": "sim_init",
+          "into": "fb_state"
+        },
+        {
+          "out": "fb_state",
+          "into": "advect",
+          "in_index": 0
+        },
+        {
+          "out": "fb_state",
+          "into": "advect",
+          "in_index": 1
+        },
+        {
+          "out": "advect",
+          "into": "advect2",
+          "in_index": 0
+        },
+        {
+          "out": "advect",
+          "into": "advect2",
+          "in_index": 1
+        },
+        {
+          "out": "advect2",
+          "into": "forces"
+        }
+      ],
+      "notes": "State packing: R=vx, G=vy, B=density, A=temperature. A NEGATIVE displace weight is what makes it a backward (semi-Lagrangian) trace: out(x) = in(x - v*dt). The forces channelmix is a 4x4 matrix, so buoyancy (G += k*A), gravity (G -= k*B), velocity damping and per-field dissipation are all one operator. Weights are in UV units, so the physics is resolution-independent \u2014 but the pixel distance travelled is not.",
+      "pitfalls": [
+        "inputfiltertype MUST be linear. With nearest, semi-Lagrangian advection quantises to the pixel grid and the field freezes.",
+        "dt is in UV: 0.030 UV = 30 px/frame at 1024. A single step that long tears the contours because the velocity changes along the trace. Split into two half-dt substeps, the second using the already-advected velocity.",
+        "TD does not cook a closed feedback network that has no consumer. Drive it with an Execute DAT onFrameStart calling cook(force=True) on the final null.",
+        "displaceTOP midpoint must be 0 for signed float velocity; the 0.5 default assumes 8-bit encoding."
+      ],
+      "references": [
+        "Stam 1999, Stable Fluids"
+      ],
+      "verified_on_build": "2025.32820"
+    },
+    {
+      "id": "vorticity_confinement_tops",
+      "name": "Vorticity confinement (Fedkiw) in TOPs",
+      "description": "Reinject the small-scale rotation that numerical diffusion removes, using only slope/channelmix/function/math operators. This is what turns a laminar plume into believable turbulent curls at low resolution.",
+      "tags": [
+        "fluid",
+        "vorticity",
+        "turbulence",
+        "no-glsl"
+      ],
+      "difficulty": "hard",
+      "ops": [
+        {
+          "name": "curl_slope",
+          "op_type": "slopeTOP",
+          "params": {
+            "red": "hgreen",
+            "green": "vred",
+            "blue": "zero",
+            "alpha": "zero",
+            "method": "prevnext",
+            "zeropoint": 0
+          }
+        },
+        {
+          "name": "curl_mix",
+          "op_type": "channelmixTOP",
+          "params": {
+            "red1": 1,
+            "red2": -1,
+            "green2": 0,
+            "blue3": 0,
+            "alpha4": 0
+          }
+        },
+        {
+          "name": "curl_abs",
+          "op_type": "functionTOP",
+          "params": {
+            "funcrgba": "abs"
+          }
+        },
+        {
+          "name": "curl_grad",
+          "op_type": "slopeTOP",
+          "params": {
+            "red": "hred",
+            "green": "vred",
+            "blue": "zero",
+            "alpha": "zero",
+            "method": "prevnext",
+            "zeropoint": 0
+          }
+        },
+        {
+          "name": "curl_len",
+          "op_type": "mathTOP",
+          "params": {
+            "chanop": "len",
+            "postoff": 0.0001
+          }
+        },
+        {
+          "name": "len_bcast",
+          "op_type": "channelmixTOP",
+          "params": {
+            "red1": 1,
+            "green1": 1,
+            "blue1": 1,
+            "alpha1": 1,
+            "green2": 0,
+            "blue3": 0,
+            "alpha4": 0
+          }
+        },
+        {
+          "name": "curl_norm",
+          "op_type": "compositeTOP",
+          "params": {
+            "operand": "divide"
+          }
+        },
+        {
+          "name": "vort_swap",
+          "op_type": "channelmixTOP",
+          "params": {
+            "red1": 0,
+            "red2": 1,
+            "green1": -1,
+            "green2": 0,
+            "blue3": 0,
+            "alpha4": 0
+          }
+        },
+        {
+          "name": "curl_bcast",
+          "op_type": "channelmixTOP",
+          "params": {
+            "red1": 1,
+            "green1": 1,
+            "green2": 0,
+            "blue3": 0,
+            "alpha4": 0
+          }
+        },
+        {
+          "name": "vort_mul",
+          "op_type": "multiplyTOP",
+          "params": {}
+        },
+        {
+          "name": "vort_scale",
+          "op_type": "mathTOP",
+          "params": {
+            "gain": 0.05
+          }
+        },
+        {
+          "name": "vort_add",
+          "op_type": "addTOP",
+          "params": {}
+        }
+      ],
+      "connections": [
+        {
+          "out": "curl_slope",
+          "into": "curl_mix"
+        },
+        {
+          "out": "curl_mix",
+          "into": "curl_abs"
+        },
+        {
+          "out": "curl_abs",
+          "into": "curl_grad"
+        },
+        {
+          "out": "curl_grad",
+          "into": "curl_len"
+        },
+        {
+          "out": "curl_len",
+          "into": "len_bcast"
+        },
+        {
+          "out": "curl_grad",
+          "into": "curl_norm",
+          "in_index": 0
+        },
+        {
+          "out": "len_bcast",
+          "into": "curl_norm",
+          "in_index": 1
+        },
+        {
+          "out": "curl_norm",
+          "into": "vort_swap"
+        },
+        {
+          "out": "curl_mix",
+          "into": "curl_bcast"
+        },
+        {
+          "out": "vort_swap",
+          "into": "vort_mul",
+          "in_index": 0
+        },
+        {
+          "out": "curl_bcast",
+          "into": "vort_mul",
+          "in_index": 1
+        },
+        {
+          "out": "vort_mul",
+          "into": "vort_scale"
+        },
+        {
+          "out": "vort_scale",
+          "into": "vort_add",
+          "in_index": 1
+        }
+      ],
+      "notes": "curl = dvy/dx - dvx/dy, obtained from ONE slopeTOP by picking red='hgreen' and green='vred' then subtracting in a channelmix. N = grad|curl| normalised, force = eps * (N.y*w, -N.x*w). Feed the velocity field into curl_slope and into vort_add[0]; vort_add outputs the velocity plus the confinement force.",
+      "pitfalls": [
+        "mathTOP chanop='len' writes the length into the RED channel ONLY. Without a channelmix broadcasting it first, the green channel of the division is divided by the epsilon and |N| explodes (measured 4.2 instead of 1.0).",
+        "The curl is a PER-PIXEL difference, so it scales as 1/width. Bind the gain to Vorticity*width/256 or the confinement silently weakens 4x when you double the resolution, and the plume goes laminar.",
+        "Add the epsilon (postoff ~1e-4) to the length BEFORE broadcasting, so N tends to 0 in irrotational regions instead of blowing up."
+      ],
+      "references": [
+        "Fedkiw, Stam, Jensen 2001, Visual Simulation of Smoke"
+      ],
+      "verified_on_build": "2025.32820"
+    },
+    {
+      "id": "volumetric_optical_depth_cone",
+      "name": "Volumetric smoke shading: cone optical-depth kernel + Beer-Lambert",
+      "description": "Light a 2D density field as a volume without raymarching. A single convolveTOP whose Table DAT kernel is a cone of taps pointing at the light integrates optical depth; functionTOP exp() turns it into transmittance.",
+      "tags": [
+        "render",
+        "volumetric",
+        "no-glsl",
+        "beer-lambert",
+        "smoke",
+        "lighting"
+      ],
+      "difficulty": "medium",
+      "ops": [
+        {
+          "name": "dens",
+          "op_type": "channelmixTOP",
+          "params": {
+            "red1": 1,
+            "green1": 1,
+            "blue1": 1,
+            "alpha1": 0,
+            "alpha4": 0,
+            "constant4": 1
+          }
+        },
+        {
+          "name": "tau_small",
+          "op_type": "mathTOP",
+          "params": {
+            "outputresolution": "custom",
+            "resolutionw": 128,
+            "resolutionh": 128,
+            "inputfiltertype": "mipmap"
+          }
+        },
+        {
+          "name": "light_kernel",
+          "op_type": "tableDAT",
+          "params": {
+            "_note": "25x25, generated: cone half-width 0.21*t+0.7 toward the light, plus 20% isotropic disc, normalised to sum 1"
+          }
+        },
+        {
+          "name": "tau_conv",
+          "op_type": "convolveTOP",
+          "params": {
+            "dat": "light_kernel",
+            "normalize": false,
+            "applytoalpha": false
+          }
+        },
+        {
+          "name": "tau_up",
+          "op_type": "mathTOP",
+          "params": {
+            "outputresolution": "custom",
+            "inputfiltertype": "linear"
+          }
+        },
+        {
+          "name": "trans_sigma",
+          "op_type": "channelmixTOP",
+          "params": {
+            "red1": -13.0,
+            "green1": -10.5,
+            "blue1": -8.0,
+            "green2": 0,
+            "blue3": 0,
+            "alpha4": 0
+          }
+        },
+        {
+          "name": "trans",
+          "op_type": "functionTOP",
+          "params": {
+            "funcrgba": "exp"
+          }
+        },
+        {
+          "name": "scatter",
+          "op_type": "channelmixTOP",
+          "params": {
+            "red1": 0.95,
+            "constant1": 0.045,
+            "green1": 0.855,
+            "green2": 0,
+            "constant2": 0.062,
+            "blue1": 0.715,
+            "blue3": 0,
+            "constant3": 0.105,
+            "alpha1": 0,
+            "alpha4": 0,
+            "constant4": 1
+          }
+        },
+        {
+          "name": "alpha_in",
+          "op_type": "mathTOP",
+          "params": {
+            "gain": -6.5
+          }
+        },
+        {
+          "name": "alpha_exp",
+          "op_type": "functionTOP",
+          "params": {
+            "funcrgba": "exp"
+          }
+        },
+        {
+          "name": "alpha_inv",
+          "op_type": "mathTOP",
+          "params": {
+            "gain": -1,
+            "postoff": 1
+          }
+        },
+        {
+          "name": "smoke",
+          "op_type": "reorderTOP",
+          "params": {
+            "outputred": "input1",
+            "outputredchan": "red",
+            "outputgreen": "input1",
+            "outputgreenchan": "green",
+            "outputblue": "input1",
+            "outputbluechan": "blue",
+            "outputalpha": "input2",
+            "outputalphachan": "red"
+          }
+        },
+        {
+          "name": "smoke_pm",
+          "op_type": "mathTOP",
+          "params": {
+            "op": "premultrgbbyalpha"
+          }
+        },
+        {
+          "name": "bg",
+          "op_type": "rampTOP",
+          "params": {
+            "type": "vertical",
+            "extendleft": "hold",
+            "extendright": "hold"
+          }
+        },
+        {
+          "name": "comp_over",
+          "op_type": "overTOP",
+          "params": {}
+        }
+      ],
+      "connections": [
+        {
+          "out": "dens",
+          "into": "tau_small"
+        },
+        {
+          "out": "tau_small",
+          "into": "tau_conv"
+        },
+        {
+          "out": "tau_conv",
+          "into": "tau_up"
+        },
+        {
+          "out": "tau_up",
+          "into": "trans_sigma"
+        },
+        {
+          "out": "trans_sigma",
+          "into": "trans"
+        },
+        {
+          "out": "trans",
+          "into": "scatter"
+        },
+        {
+          "out": "dens",
+          "into": "alpha_in"
+        },
+        {
+          "out": "alpha_in",
+          "into": "alpha_exp"
+        },
+        {
+          "out": "alpha_exp",
+          "into": "alpha_inv"
+        },
+        {
+          "out": "scatter",
+          "into": "smoke",
+          "in_index": 0
+        },
+        {
+          "out": "alpha_inv",
+          "into": "smoke",
+          "in_index": 1
+        },
+        {
+          "out": "smoke",
+          "into": "smoke_pm"
+        },
+        {
+          "out": "smoke_pm",
+          "into": "comp_over",
+          "in_index": 0
+        },
+        {
+          "out": "bg",
+          "into": "comp_over",
+          "in_index": 1
+        }
+      ],
+      "notes": "Optical depth as a convolution: the kernel is a line integral toward the light, so ONE operator replaces a raymarch. Compute it at 128x128 (optical depth is a smooth quantity) and bilinearly upsample. trans_sigma is a channelmix so the three extinction coefficients differ per channel: that alone gives cold shadows and warm highlights with no grading. scatter is albedo*light*T + ambient, again one channelmix. alpha = 1 - exp(-D*density).",
+      "pitfalls": [
+        "A kernel that is a ONE-PIXEL-WIDE line of taps produces a hard terminator and the result reads as cartoon cel-shading. Widen it into a cone (half-width growing with distance) and add ~20% isotropic weight to approximate multiple scattering.",
+        "overTOP composites with PREMULTIPLIED alpha. With straight alpha the background is ignored and empty areas come out at the smoke colour, not the backdrop.",
+        "The view extinction (alpha) must be consistent with the light extinction (sigma). With D=2.6 against sigma=15 the median alpha was 0.15 and the whole tonal range collapsed to near black over the backdrop.",
+        "Normalising the kernel to sum 1 makes tau a weighted MEAN, not an integral \u2014 sigma must be scaled up accordingly (measured: 10x).",
+        "rampTOP type='radial' has a seam at the half-height row (measured jump 0.044). Use vertical for backdrops.",
+        "Shading the density with normalmapTOP + N.L above ~0.09 makes the smoke look like a wax surface instead of a volume."
+      ],
+      "references": [
+        "Beer-Lambert law",
+        "Harris 2003, Real-Time Cloud Rendering"
+      ],
+      "verified_on_build": "2025.32820"
+    }
+  ]
+}

@@ -18,6 +18,7 @@ from td_mcp.kb.vj_loops import get_vj_loops_kb
 from td_mcp.kb.glsl import get_glsl_kb
 from td_mcp.kb.operators import OperatorEntry, OperatorsCatalog, get_catalog, reload_catalog
 from td_mcp.kb.pop_patterns import get_pop_kb
+from td_mcp.kb.top_patterns import get_top_kb
 from td_mcp.kb.vector import ChunkSource, build_seed_chunks, get_vector_kb
 from td_mcp.protocol import AnnotationSpec, LayoutDiff, OperatorPosition, OperatorRename, TDError
 from td_mcp.tools.layout import (
@@ -1308,6 +1309,87 @@ async def kb_promote_pop_pattern(pattern: dict) -> dict:
     # mid-write must not corrupt it.
     write_json_atomic(_DATA_PATH, data, indent=2)
     reset_pop_kb_singleton()
+    return {"ok": True, "id": validated.id, "total_patterns": len(data["patterns"]),
+            "next_step": "kb_index_update to fold the new pattern chunk into the index."}
+
+
+@mcp.tool()
+async def kb_top_pattern(pattern_id: str = "", tag: str = "") -> dict:
+    """Curated TOP-family recipes: numerical solvers, feedback architectures and
+    volumetric rendering built from node operators instead of GLSL.
+
+    No args: returns the index of available patterns.
+    pattern_id: returns the full pattern (ops + connections + notes + pitfalls).
+    tag: returns all patterns matching the tag.
+
+    Search this BEFORE reaching for a glslTOP. The operator semantics these
+    patterns depend on (slopeTOP dividing by the sample step, overTOP wanting
+    premultiplied alpha, mathTOP 'len' writing only red...) were measured live,
+    not read from documentation — the pitfalls list is the expensive part.
+    """
+    kb = get_top_kb()
+    if pattern_id:
+        pat = kb.get(pattern_id)
+        if pat is None:
+            return {
+                "ok": False,
+                "error": f"Unknown pattern id: {pattern_id!r}",
+                "available": [p.id for p in kb.patterns],
+            }
+        return {"ok": True, "pattern": pat.model_dump()}
+    if tag:
+        matches = kb.by_tag(tag)
+        return {"ok": True, "tag": tag, "count": len(matches),
+                "patterns": [m.model_dump() for m in matches]}
+    return {
+        "ok": True,
+        "count": len(kb.patterns),
+        "patterns": kb.index(),
+        "note": "Author new patterns by editing td_mcp/kb/data/top_patterns.json "
+                "or via kb_promote_top_pattern.",
+    }
+
+
+@mcp.tool()
+async def kb_promote_top_pattern(pattern: dict) -> dict:
+    """Append a validated pattern to the curated TOP patterns KB.
+
+    Symmetric with kb_promote_pop_pattern. The pattern dict must satisfy the
+    TOPPattern schema (id, name, description, ops[{name, op_type, params}],
+    connections[{out, into}], notes, pitfalls, references, verified_on_build).
+    All op_types must exist in the operators catalog and at least one must be a
+    TOP. Ids are unique — promotion of an existing id is rejected, edit the JSON
+    directly for revisions.
+    """
+    import json as _json
+
+    from td_mcp.kb.top_patterns import (
+        _DATA_PATH,
+        TOPPattern,
+        get_top_kb,
+        reset_top_kb_singleton,
+    )
+
+    try:
+        validated = TOPPattern.model_validate(pattern)
+    except Exception as e:
+        return {"ok": False, "error": f"schema validation failed: {e}"}
+
+    catalog_classes = {e.python_class for e in get_catalog().list()}
+    unknown = [o.op_type for o in validated.ops if o.op_type not in catalog_classes]
+    if unknown:
+        return {"ok": False, "error": f"op_types not in catalog: {unknown}"}
+    if not any(o.op_type.endswith("TOP") for o in validated.ops):
+        return {"ok": False, "error": "no TOP operator — this KB curates TOP workflows"}
+    if get_top_kb().get(validated.id) is not None:
+        return {"ok": False, "error": f"pattern id {validated.id!r} already exists"}
+
+    from td_mcp.util import write_json_atomic
+
+    data = _json.loads(_DATA_PATH.read_text())
+    data["patterns"].append(validated.model_dump())
+    write_json_atomic(_DATA_PATH, data, indent=2)
+    reset_top_kb_singleton()
     return {"ok": True, "id": validated.id, "total_patterns": len(data["patterns"]),
             "next_step": "kb_index_update to fold the new pattern chunk into the index."}
 
